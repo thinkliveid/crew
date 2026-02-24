@@ -31,8 +31,7 @@ $config = new Config(getcwd());
 $strategyFactory = new DetectionStrategyFactory();
 $agentsDetector = new AgentsDetector($strategyFactory);
 
-$application = new Application("", "1.0.0");
-$application->addCommand(new SimpleCommand());
+$application = new Application("AI Crew (personal skills assistant)", "1.0.0");
 $application->addCommand(new InstallCommand($config, $agentsDetector));
 $application->addCommand(new AddSkillCommand($config, $agentsDetector));
 $application->addCommand(new UpdateCommand($config));
