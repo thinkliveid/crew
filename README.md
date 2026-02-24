@@ -12,7 +12,7 @@ Crew discovers which AI agents are installed on your system, downloads skills fr
 ## Installation
 
 ```bash
-composer global require thinkliveid/crew
+composer require thinkliveid/crew
 ```
 
 Or install as a project dependency:
