@@ -3,3 +3,5 @@
 /.claude
 CLAUDE.md
 crew.json
+/.idea/*
+.DS_Store
