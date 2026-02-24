@@ -1,0 +1,25 @@
+#!/usr/bin/env php
+<?php
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use Symfony\Component\Console\Application;
+use Thinkliveid\Crew\Console\AddSkillCommand;
+use Thinkliveid\Crew\Console\InstallCommand;
+use Thinkliveid\Crew\Console\SimpleCommand;
+use Thinkliveid\Crew\Console\UpdateCommand;
+use Thinkliveid\Crew\Install\AgentsDetector;
+use Thinkliveid\Crew\Install\Detection\DetectionStrategyFactory;
+use Thinkliveid\Crew\Support\Config;
+
+$config = new Config(getcwd());
+$strategyFactory = new DetectionStrategyFactory();
+$agentsDetector = new AgentsDetector($strategyFactory);
+
+$application = new Application("", "1.0.0");
+$application->addCommand(new SimpleCommand());
+$application->addCommand(new InstallCommand($config, $agentsDetector));
+$application->addCommand(new AddSkillCommand($config, $agentsDetector));
+$application->addCommand(new UpdateCommand($config));
+
+$application->run();

@@ -1,0 +1,5 @@
+/vendor/*
+/.ai/*
+/.claude
+CLAUDE.md
+crew.json

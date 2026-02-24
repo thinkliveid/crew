@@ -1,0 +1,45 @@
+{
+  "name": "thinkliveid/crew",
+  "description": "A PHP CLI tool for managing AI agent skills, guidelines, and MCP configurations across multiple IDE coding assistants.",
+  "type": "library",
+  "keywords": [
+    "php",
+    "symfony",
+    "slim",
+    "native",
+    "ai",
+    "agents",
+    "skills",
+    "mcp",
+    "cli",
+    "claude",
+    "cursor",
+    "copilot",
+    "gemini",
+    "junie",
+    "codex",
+    "opencode"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/thinkliveid/crew",
+  "autoload": {
+    "psr-4": {
+      "Thinkliveid\\Crew\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "purwantoid",
+      "email": "purwanto.dev@gmail.com"
+    }
+  ],
+  "bin": [
+    "bin/crew"
+  ],
+  "require": {
+    "php": "^8.3",
+    "guzzlehttp/guzzle": "^7.10",
+    "symfony/console": "^7.0|^8.0",
+    "symfony/process": "^8.0"
+  }
+}
