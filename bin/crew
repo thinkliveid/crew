@@ -8,6 +8,7 @@ function includeIfExists(string $file): bool
 
 if (
   !includeIfExists(__DIR__.'/../vendor/autoload.php') &&
+  !includeIfExists(__DIR__.'/../../../autoload.php') &&
   !includeIfExists(__DIR__.'/../../vendor/autoload.php') &&
   !includeIfExists(__DIR__.'/../../../vendor/autoload.php') &&
   !includeIfExists(__DIR__ . '/../../../../autoload.php') &&
