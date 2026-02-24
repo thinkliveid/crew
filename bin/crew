@@ -1,6 +1,11 @@
 #!/usr/bin/env php
 <?php
 
+if ('cli' !== \PHP_SAPI)
+{
+  throw new Exception('This script must be run from the command line.');
+}
+
 function includeIfExists(string $file): bool
 {
   return file_exists($file) && include $file;
