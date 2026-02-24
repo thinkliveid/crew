@@ -212,11 +212,31 @@ class InstallCommand extends Command
     $sourceProvider = new LocalSkillProvider($basePath);
     $localSkills = $sourceProvider->discoverSkills();
 
+    // Report validation errors for invalid skills
+    $invalidSkills = $sourceProvider->getInvalidSkills();
+
+    if (!empty($invalidSkills) && $interactive)
+    {
+      $io->warning('Some local skills failed validation and will be skipped:');
+
+      foreach ($invalidSkills as $name => $result)
+      {
+        $io->text(sprintf('  <comment>%s</comment>:', $name));
+
+        foreach ($result->errors as $error)
+        {
+          $io->text(sprintf('    - %s', $error));
+        }
+      }
+
+      $io->newLine();
+    }
+
     if (empty($localSkills))
     {
       if ($interactive)
       {
-        $io->info('No local skills found in .ai/skills/.');
+        $io->info('No valid local skills found in .ai/skills/.');
       }
       return;
     }
@@ -282,6 +302,26 @@ class InstallCommand extends Command
   {
     $provider = new BuiltInSkillProvider(getcwd());
     $published = $provider->publishAll();
+
+    // Report validation errors for built-in skills
+    $invalidSkills = $provider->getInvalidSkills();
+
+    if (!empty($invalidSkills) && $interactive)
+    {
+      $io->warning('Some built-in skills failed validation and will be skipped:');
+
+      foreach ($invalidSkills as $name => $result)
+      {
+        $io->text(sprintf('  <comment>%s</comment>:', $name));
+
+        foreach ($result->errors as $error)
+        {
+          $io->text(sprintf('    - %s', $error));
+        }
+      }
+
+      $io->newLine();
+    }
 
     if (!empty($published) && $interactive)
     {

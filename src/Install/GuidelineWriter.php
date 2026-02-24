@@ -6,15 +6,18 @@ namespace Thinkliveid\Crew\Install;
 
 use Thinkliveid\Crew\Contracts\SupportsGuidelines;
 use Thinkliveid\Crew\Install\Agents\Agent;
+use Thinkliveid\Crew\Skills\SkillValidator;
 
 class GuidelineWriter
 {
   private const string TAG_OPEN = '<crew-guidelines>';
   private const string TAG_CLOSE = '</crew-guidelines>';
 
+  protected SkillValidator $validator;
+
   public function __construct(protected string $basePath)
   {
-    //
+    $this->validator = new SkillValidator();
   }
 
   /**
@@ -152,18 +155,16 @@ class GuidelineWriter
         continue;
       }
 
-      $skillMdPath = $skillDir . '/SKILL.md';
+      $result = $this->validator->validate($skillDir);
 
-      if (!file_exists($skillMdPath))
+      if (!$result->valid)
       {
         continue;
       }
 
-      $description = $this->getSkillDescription($skillMdPath);
-
       $skills[] = [
         'name' => $entry,
-        'description' => $description,
+        'description' => $result->description() ?? 'No description available',
         'path' => $agentSkillsPath . '/' . $entry,
       ];
     }
@@ -199,18 +200,16 @@ class GuidelineWriter
             continue;
           }
 
-          $skillMdPath = $skillDir . '/SKILL.md';
+          $result = $this->validator->validate($skillDir);
 
-          if (!file_exists($skillMdPath))
+          if (!$result->valid)
           {
             continue;
           }
 
-          $description = $this->getSkillDescription($skillMdPath);
-
           $skills[] = [
             'name' => $entry,
-            'description' => $description,
+            'description' => $result->description() ?? 'No description available',
             'path' => $agentSkillsPath . '/' . $entry,
           ];
         }
@@ -222,39 +221,4 @@ class GuidelineWriter
     return $skills;
   }
 
-  /**
-   * Get the first meaningful line of SKILL.md as description.
-   */
-  protected function getSkillDescription(string $path): string
-  {
-    $content = file_get_contents($path);
-
-    if ($content === false || trim($content) === '')
-    {
-      return 'No description available';
-    }
-
-    $lines = explode("\n", $content);
-
-    foreach ($lines as $line)
-    {
-      $trimmed = trim($line);
-
-      // Skip baris kosong, heading markers, dan code fences
-      if ($trimmed === '' || str_starts_with($trimmed, '#') || str_starts_with($trimmed, '```'))
-      {
-        continue;
-      }
-
-      // Potong jika terlalu panjang
-      if (mb_strlen($trimmed) > 120)
-      {
-        return mb_substr($trimmed, 0, 117) . '...';
-      }
-
-      return $trimmed;
-    }
-
-    return 'No description available';
-  }
 }

@@ -40,6 +40,7 @@
     "php": "^8.3",
     "guzzlehttp/guzzle": "^7.10",
     "symfony/console": "^7.0|^8.0",
-    "symfony/process": "^8.0"
+    "symfony/process": "^8.0",
+    "symfony/yaml": "^7.0|^8.0"
   }
 }

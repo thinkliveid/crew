@@ -7,16 +7,23 @@ namespace Thinkliveid\Crew\Skills\Local;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
+use Thinkliveid\Crew\Skills\SkillValidator;
+use Thinkliveid\Crew\Skills\ValidationResult;
 
 class LocalSkillProvider
 {
   protected string $sourcePath;
   protected string $targetPath;
+  protected SkillValidator $validator;
+
+  /** @var array<string, ValidationResult> */
+  protected array $validationResults = [];
 
   public function __construct(protected string $basePath, ?string $targetPath = null)
   {
     $this->sourcePath = $this->basePath . '/.ai/skills';
     $this->targetPath = $targetPath ?? ($this->basePath . '/.claude/skills');
+    $this->validator = new SkillValidator();
   }
 
   /**
@@ -51,7 +58,15 @@ class LocalSkillProvider
         continue;
       }
 
-      if (file_exists($skillDir . '/SKILL.md'))
+      if (!file_exists($skillDir . '/SKILL.md'))
+      {
+        continue;
+      }
+
+      $result = $this->validator->validate($skillDir);
+      $this->validationResults[$entry] = $result;
+
+      if ($result->valid)
       {
         $skills[] = $entry;
       }
@@ -60,6 +75,27 @@ class LocalSkillProvider
     sort($skills);
 
     return $skills;
+  }
+
+  /**
+   * Get validation results for skills that failed validation.
+   *
+   * @return array<string, ValidationResult>
+   */
+  public function getInvalidSkills(): array
+  {
+    return array_filter(
+      $this->validationResults,
+      fn(ValidationResult $result): bool => !$result->valid
+    );
+  }
+
+  /**
+   * Get the validation result for a specific skill.
+   */
+  public function getValidationResult(string $name): ?ValidationResult
+  {
+    return $this->validationResults[$name] ?? null;
   }
 
   /**
