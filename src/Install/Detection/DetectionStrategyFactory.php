@@ -13,13 +13,8 @@ class DetectionStrategyFactory
   private const string TYPE_COMMAND = 'command';
   private const string TYPE_FILE = 'file';
 
-  /**
-   * Kita buat container menjadi opsional.
-   * Jika tidak ada container, kita instansiasi manual.
-   */
   public function __construct(private readonly mixed $container = null)
   {
-    //
   }
 
   public function make(string|array $type, array $config = []): DetectionStrategy
@@ -40,9 +35,6 @@ class DetectionStrategyFactory
     };
   }
 
-  /**
-   * Helper untuk handle resolusi class baik lewat container atau manual.
-   */
   protected function resolve(string $className): DetectionStrategy
   {
     if ($this->container && method_exists($this->container, 'get'))
@@ -61,7 +53,6 @@ class DetectionStrategyFactory
   public function makeFromConfig(array $config): DetectionStrategy
   {
     $type = $this->inferTypeFromConfig($config);
-
     return $this->make($type, $config);
   }
 
@@ -74,7 +65,6 @@ class DetectionStrategyFactory
     ];
 
     $types = array_values(array_filter($typeMap, fn($value, $key) => array_key_exists($key, $config), ARRAY_FILTER_USE_BOTH));
-
     if (empty($types))
     {
       $allowedKeys = implode(', ', array_keys($typeMap));

@@ -25,7 +25,7 @@ class Gemini extends Agent implements SupportsGuidelines, SupportsMcp, SupportsS
   {
     return preg_replace_callback(
       '/## Foundational Context.*?(?=\n## |$)/s',
-      fn(array $matches) => preg_replace('/(?<!\\\\)@([a-z0-9-]+\/[a-z0-9-]+)/i', '\\\\@$1', $matches[0]),
+      static fn(array $matches) => preg_replace('/(?<!\\\\)@([a-z0-9-]+\/[a-z0-9-]+)/i', '\\\\@$1', $matches[0]),
       $markdown
     );
   }
@@ -37,7 +37,7 @@ class Gemini extends Agent implements SupportsGuidelines, SupportsMcp, SupportsS
       Platform::Darwin, Platform::Linux => [
         'command' => 'command -v gemini',
       ],
-      Platform::Windows => [
+      Platform::Windows                 => [
         'command' => 'cmd /c where gemini 2>nul',
       ],
     };

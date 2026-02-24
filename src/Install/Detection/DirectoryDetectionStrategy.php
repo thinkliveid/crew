@@ -18,7 +18,6 @@ class DirectoryDetectionStrategy implements DetectionStrategy
 
     $paths = (array)$config['paths'];
     $basePath = $config['basePath'] ?? '';
-
     foreach ($paths as $path)
     {
       $expandedPath = $this->expandPath($path, $platform);
@@ -48,7 +47,6 @@ class DirectoryDetectionStrategy implements DetectionStrategy
   protected function expandPath(string $path, ?Platform $platform = null): string
   {
     $platform = $platform ?? $this->detectPlatform();
-
     if ($platform === Platform::Windows)
     {
       return preg_replace_callback('/%([^%]+)%/', static function (array $matches)

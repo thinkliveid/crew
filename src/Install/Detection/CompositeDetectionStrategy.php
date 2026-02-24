@@ -14,7 +14,6 @@ readonly class CompositeDetectionStrategy implements DetectionStrategy
    */
   public function __construct(private array $strategies)
   {
-    //
   }
 
   public function detect(array $config, ?Platform $platform = null): bool

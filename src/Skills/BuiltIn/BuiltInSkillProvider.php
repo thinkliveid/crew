@@ -46,21 +46,18 @@ class BuiltInSkillProvider
   public function discoverSkills(): array
   {
     $path = $this->getPackageSkillsPath();
-
     if (!is_dir($path))
     {
       return [];
     }
 
     $entries = scandir($path);
-
     if ($entries === false)
     {
       return [];
     }
 
     $skills = [];
-
     foreach ($entries as $entry)
     {
       if ($entry === '.' || $entry === '..')
@@ -69,7 +66,6 @@ class BuiltInSkillProvider
       }
 
       $skillDir = $path . '/' . $entry;
-
       if (!is_dir($skillDir))
       {
         continue;
@@ -82,7 +78,6 @@ class BuiltInSkillProvider
 
       $result = $this->validator->validate($skillDir);
       $this->validationResults[$entry] = $result;
-
       if ($result->valid)
       {
         $skills[] = $entry;
@@ -103,7 +98,7 @@ class BuiltInSkillProvider
   {
     return array_filter(
       $this->validationResults,
-      fn(ValidationResult $result): bool => !$result->valid
+      static fn(ValidationResult $result): bool => !$result->valid
     );
   }
 
@@ -116,7 +111,6 @@ class BuiltInSkillProvider
   public function publishAll(): array
   {
     $skills = $this->discoverSkills();
-
     if (empty($skills))
     {
       return [];
@@ -129,15 +123,12 @@ class BuiltInSkillProvider
     foreach ($skills as $name)
     {
       $targetDir = $projectPath . '/' . $name;
-
-      // Skip jika skill sudah ada di project
       if (is_dir($targetDir))
       {
         continue;
       }
 
       $sourceDir = $packagePath . '/' . $name;
-
       if ($this->recursiveCopy($sourceDir, $targetDir))
       {
         $published[] = $name;

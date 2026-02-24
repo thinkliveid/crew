@@ -25,6 +25,7 @@ class GuidelineWriter
    *
    * @param Agent&SupportsGuidelines $agent
    * @param array<int, array{name: string, description: string, path: string}> $skills
+   * @return bool
    */
   public function write(Agent&SupportsGuidelines $agent, array $skills): bool
   {
@@ -38,16 +39,13 @@ class GuidelineWriter
     $block = $agent->transformGuidelines($block);
 
     $existingContent = file_exists($filePath) ? file_get_contents($filePath) : '';
-
     if ($existingContent === false)
     {
       $existingContent = '';
     }
 
     $newContent = $this->mergeContent($existingContent, $block, $agent->frontmatter());
-
     $dir = dirname($filePath);
-
     if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir))
     {
       return false;
@@ -86,7 +84,6 @@ class GuidelineWriter
    */
   protected function mergeContent(string $existing, string $block, bool $frontmatter): string
   {
-    // Jika sudah ada crew-guidelines block, replace in-place
     if (str_contains($existing, self::TAG_OPEN) && str_contains($existing, self::TAG_CLOSE))
     {
       $pattern = '/' . preg_quote(self::TAG_OPEN, '/') . '.*?' . preg_quote(self::TAG_CLOSE, '/') . '/s';
@@ -94,15 +91,12 @@ class GuidelineWriter
       return preg_replace($pattern, $block, $existing);
     }
 
-    // Jika file ada isi tapi belum ada block, append dengan separator
     $trimmed = trim($existing);
-
     if ($trimmed !== '')
     {
       return $existing . "\n\n===\n\n" . $block . "\n";
     }
 
-    // Jika file kosong/baru, tulis block saja (dengan frontmatter jika perlu)
     if ($frontmatter)
     {
       return "---\n---\n\n" . $block . "\n";
@@ -121,14 +115,12 @@ class GuidelineWriter
   public function collectSkillInfo(Agent&SupportsGuidelines $agent): array
   {
     $skillsSourcePath = $this->basePath . '/.ai/skills';
-
     if (!is_dir($skillsSourcePath))
     {
       return [];
     }
 
     $entries = scandir($skillsSourcePath);
-
     if ($entries === false)
     {
       return [];
@@ -140,7 +132,6 @@ class GuidelineWriter
       : '.claude/skills';
 
     $skills = [];
-
     foreach ($entries as $entry)
     {
       if ($entry === '.' || $entry === '..')
@@ -149,14 +140,12 @@ class GuidelineWriter
       }
 
       $skillDir = $skillsSourcePath . '/' . $entry;
-
       if (!is_dir($skillDir))
       {
         continue;
       }
 
       $result = $this->validator->validate($skillDir);
-
       if (!$result->valid)
       {
         continue;
@@ -169,18 +158,13 @@ class GuidelineWriter
       ];
     }
 
-    // Juga kumpulkan skills yang ada langsung di agent skill directory
-    // tapi tidak ada di .ai/skills/ (misalnya dari GitHub download langsung)
     $agentSkillsFullPath = $this->basePath . '/' . $agentSkillsPath;
-
     if (is_dir($agentSkillsFullPath))
     {
       $agentEntries = scandir($agentSkillsFullPath);
-
       if ($agentEntries !== false)
       {
         $existingNames = array_column($skills, 'name');
-
         foreach ($agentEntries as $entry)
         {
           if ($entry === '.' || $entry === '..')
@@ -194,14 +178,12 @@ class GuidelineWriter
           }
 
           $skillDir = $agentSkillsFullPath . '/' . $entry;
-
           if (!is_dir($skillDir))
           {
             continue;
           }
 
           $result = $this->validator->validate($skillDir);
-
           if (!$result->valid)
           {
             continue;
@@ -216,7 +198,7 @@ class GuidelineWriter
       }
     }
 
-    usort($skills, fn(array $a, array $b): int => strcmp($a['name'], $b['name']));
+    usort($skills, static fn(array $a, array $b): int => strcmp($a['name'], $b['name']));
 
     return $skills;
   }

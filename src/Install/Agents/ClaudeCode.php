@@ -29,7 +29,7 @@ class ClaudeCode extends Agent implements SupportsGuidelines, SupportsMcp, Suppo
       Platform::Darwin, Platform::Linux => [
         'command' => 'command -v claude',
       ],
-      Platform::Windows => [
+      Platform::Windows                 => [
         'command' => 'cmd /c where claude 2>nul',
       ],
     };
@@ -41,11 +41,6 @@ class ClaudeCode extends Agent implements SupportsGuidelines, SupportsMcp, Suppo
       'paths' => ['.claude'],
       'files' => ['CLAUDE.md'],
     ];
-  }
-
-  public function mcpInstallationStrategy(): McpInstallationStrategy
-  {
-    return McpInstallationStrategy::File;
   }
 
   public function mcpConfigPath(): string

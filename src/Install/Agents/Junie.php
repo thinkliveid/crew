@@ -30,10 +30,10 @@ class Junie extends Agent implements SupportsGuidelines, SupportsMcp, SupportsSk
   {
     return match ($platform)
     {
-      Platform::Darwin => [
+      Platform::Darwin  => [
         'paths' => ['/Applications/PhpStorm.app'],
       ],
-      Platform::Linux => [
+      Platform::Linux   => [
         'paths' => [
           '/opt/phpstorm',
           '/opt/PhpStorm*',

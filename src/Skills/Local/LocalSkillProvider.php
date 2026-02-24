@@ -86,7 +86,7 @@ class LocalSkillProvider
   {
     return array_filter(
       $this->validationResults,
-      fn(ValidationResult $result): bool => !$result->valid
+      static fn(ValidationResult $result): bool => !$result->valid
     );
   }
 

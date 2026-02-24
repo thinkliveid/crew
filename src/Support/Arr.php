@@ -35,7 +35,6 @@ class Arr
   public static function set(array &$array, string $key, mixed $value): void
   {
     $keys = explode('.', $key);
-
     while (count($keys) > 1)
     {
       $segment = array_shift($keys);

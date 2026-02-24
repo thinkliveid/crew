@@ -26,7 +26,6 @@ class UpdateCommand extends Command
   protected function execute(InputInterface $input, OutputInterface $output): int
   {
     $io = new SymfonyStyle($input, $output);
-
     if (!$this->config->isValid())
     {
       $io->error('No crew.json found. Please run [php crew install:skill] first.');
@@ -34,7 +33,6 @@ class UpdateCommand extends Command
     }
 
     $agents = $this->config->getAgents();
-
     if (empty($agents))
     {
       $io->error('No agents configured. Please run [php crew install:skill] first to set up your agents.');
@@ -43,7 +41,6 @@ class UpdateCommand extends Command
 
     $hasLocalSkills = is_dir(getcwd() . '/.ai/skills');
     $repos = $this->config->getSkills();
-
     if (empty($repos) && !$hasLocalSkills)
     {
       $io->info('No skills configured and no .ai/skills/ directory found. Nothing to update.');
@@ -58,7 +55,6 @@ class UpdateCommand extends Command
     ]);
 
     $installCommand->run($installInput, $output);
-
     $io->success('Skills updated successfully.');
 
     return Command::SUCCESS;

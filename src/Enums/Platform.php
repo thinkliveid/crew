@@ -12,10 +12,11 @@ enum Platform: string
 
   public static function current(): self
   {
-    return match (PHP_OS_FAMILY) {
+    return match (PHP_OS_FAMILY)
+    {
       'Windows' => self::Windows,
-      'Darwin' => self::Darwin,
-      default => self::Linux,
+      'Darwin'  => self::Darwin,
+      default   => self::Linux,
     };
   }
 }

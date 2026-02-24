@@ -33,7 +33,7 @@ class AgentsDetector
    */
   public function __construct(
     private readonly DetectionStrategyFactory $strategyFactory,
-    private readonly ?array $agentClasses = null,
+    private readonly ?array                   $agentClasses = null,
   )
   {
   }

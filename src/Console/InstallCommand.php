@@ -35,10 +35,7 @@ class InstallCommand extends Command
   /** @var array<string> */
   private array $projectInstalledAgents = [];
 
-  public function __construct(
-    private readonly Config $config,
-    private readonly AgentsDetector $agentsDetector,
-  )
+  public function __construct(private readonly Config $config, private readonly AgentsDetector $agentsDetector)
   {
     parent::__construct();
   }
@@ -112,7 +109,6 @@ class InstallCommand extends Command
   private function selectAgents(InputInterface $input, SymfonyStyle $io, bool $interactive): array
   {
     $allAgents = $this->agentsDetector->getAgents();
-
     if (empty($allAgents))
     {
       return [];
@@ -152,7 +148,6 @@ class InstallCommand extends Command
 
     $detected = array_unique(array_merge($this->systemInstalledAgents, $this->projectInstalledAgents));
     $relevant = array_unique(array_merge($detected, $savedAgents));
-
     if (empty($relevant))
     {
       $io->warning('No agents detected on your system or project.');
@@ -192,10 +187,8 @@ class InstallCommand extends Command
   private function resolveAgentInstances(array $names): array
   {
     $allAgents = $this->agentsDetector->getAgents();
-
-    return array_values(array_filter(
-      $allAgents,
-      fn(Agent $agent): bool => in_array($agent->name(), $names, true)
+    return array_values(array_filter($allAgents,
+      static fn(Agent $agent): bool => in_array($agent->name(), $names, true)
     ));
   }
 
@@ -218,11 +211,9 @@ class InstallCommand extends Command
     if (!empty($invalidSkills) && $interactive)
     {
       $io->warning('Some local skills failed validation and will be skipped:');
-
       foreach ($invalidSkills as $name => $result)
       {
         $io->text(sprintf('  <comment>%s</comment>:', $name));
-
         foreach ($result->errors as $error)
         {
           $io->text(sprintf('    - %s', $error));
@@ -243,7 +234,6 @@ class InstallCommand extends Command
 
     // Filter agents that support skills
     $skillAgents = array_filter($agents, fn(Agent $agent): bool => $agent instanceof SupportsSkills);
-
     if (empty($skillAgents))
     {
       if ($interactive)
@@ -277,7 +267,6 @@ class InstallCommand extends Command
       $targetPath = $basePath . '/' . $agent->skillsPath();
       $provider = new LocalSkillProvider($basePath, $targetPath);
       $synced = $provider->syncAll();
-
       if (!empty($synced) && $interactive)
       {
         $io->text(sprintf(
@@ -305,15 +294,12 @@ class InstallCommand extends Command
 
     // Report validation errors for built-in skills
     $invalidSkills = $provider->getInvalidSkills();
-
     if (!empty($invalidSkills) && $interactive)
     {
       $io->warning('Some built-in skills failed validation and will be skipped:');
-
       foreach ($invalidSkills as $name => $result)
       {
         $io->text(sprintf('  <comment>%s</comment>:', $name));
-
         foreach ($result->errors as $error)
         {
           $io->text(sprintf('    - %s', $error));
@@ -340,10 +326,9 @@ class InstallCommand extends Command
   {
     $basePath = getcwd();
     $writer = new GuidelineWriter($basePath);
-
     $guidelineAgents = array_filter(
       $agents,
-      fn(Agent $agent): bool => $agent instanceof SupportsGuidelines
+      static fn(Agent $agent): bool => $agent instanceof SupportsGuidelines
     );
 
     if (empty($guidelineAgents))
@@ -352,7 +337,6 @@ class InstallCommand extends Command
     }
 
     $written = [];
-
     foreach ($guidelineAgents as $agent)
     {
       /** @var Agent&SupportsGuidelines $agent */
@@ -383,7 +367,6 @@ class InstallCommand extends Command
   private function installConfiguredSkills(bool $interactive, SymfonyStyle $io, OutputInterface $output): void
   {
     $repos = $this->config->getSkills();
-
     if (empty($repos))
     {
       return;
@@ -395,7 +378,6 @@ class InstallCommand extends Command
       $io->listing($repos);
 
       $proceed = $io->confirm('Install skills from these repositories?', true);
-
       if (!$proceed)
       {
         $io->comment('Skipped GitHub skill installation.');
@@ -404,7 +386,6 @@ class InstallCommand extends Command
     }
 
     $addSkillCommand = $this->getApplication()->find('add:skill');
-
     foreach ($repos as $repo)
     {
       $addSkillInput = new ArrayInput([

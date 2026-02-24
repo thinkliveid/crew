@@ -4,17 +4,11 @@ declare(strict_types=1);
 
 namespace Thinkliveid\Crew\Support;
 
-/**
- * Class Config - Handle crew.json configuration
- */
 class Config
 {
   protected const string FILE = 'crew.json';
   protected string $basePath;
 
-  /**
-   * @param string|null $basePath Root direktori project tempat crew.json berada.
-   */
   public function __construct(?string $basePath = null)
   {
     $this->basePath = $basePath ?? dirname(__DIR__, 2);

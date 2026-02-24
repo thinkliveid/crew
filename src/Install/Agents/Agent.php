@@ -15,7 +15,6 @@ abstract class Agent
 {
   public function __construct(protected readonly DetectionStrategyFactory $strategyFactory)
   {
-    //
   }
 
   abstract public function name(): string;
@@ -61,17 +60,13 @@ abstract class Agent
   public function detectOnSystem(Platform $platform): bool
   {
     $config = $this->systemDetectionConfig($platform);
-    $strategy = $this->strategyFactory->makeFromConfig($config);
-
-    return $strategy->detect($config, $platform);
+    return $this->strategyFactory->makeFromConfig($config)->detect($config, $platform);
   }
 
   public function detectInProject(string $basePath): bool
   {
     $config = array_merge($this->projectDetectionConfig(), ['basePath' => $basePath]);
-    $strategy = $this->strategyFactory->makeFromConfig($config);
-
-    return $strategy->detect($config);
+    return $this->strategyFactory->makeFromConfig($config)->detect($config);
   }
 
   public function mcpInstallationStrategy(): McpInstallationStrategy
@@ -84,15 +79,14 @@ abstract class Agent
    *
    * @param string $name
    * @param array<class-string<Agent>> $agentClasses
+   * @return Agent|null
    */
-  public static function fromName(string $name, array $agentClasses = []): ?Agent
+  public static function fromName(string $name, array $agentClasses = []): ?self
   {
     $factory = new DetectionStrategyFactory();
-
     foreach ($agentClasses as $class)
     {
       $instance = new $class($factory);
-
       if ($instance->name() === $name)
       {
         return $instance;
@@ -163,7 +157,6 @@ abstract class Agent
   public function installHttpMcp(string $key, string $url): bool
   {
     $path = $this->mcpConfigPath();
-
     if (!$path)
     {
       return false;
@@ -204,16 +197,13 @@ abstract class Agent
   protected function installShellMcp(string $key, string $command, array $args = [], array $env = []): bool
   {
     $shellCommand = $this->shellMcpCommand();
-
     if ($shellCommand === null)
     {
       return false;
     }
 
     $normalized = $this->normalizeCommand($command, $args);
-
     $envString = '';
-
     foreach ($env as $envKey => $value)
     {
       $envKey = strtoupper($envKey);
@@ -252,14 +242,12 @@ abstract class Agent
   protected function installFileMcp(string $key, string $command, array $args = [], array $env = []): bool
   {
     $path = $this->mcpConfigPath();
-
     if (!$path)
     {
       return false;
     }
 
     $normalized = $this->normalizeCommand($command, $args);
-
     $writer = str_ends_with($path, '.toml')
       ? new TomlFileWriter($path, $this->defaultMcpConfig())
       : new FileWriter($path, $this->defaultMcpConfig());

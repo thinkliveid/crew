@@ -25,10 +25,10 @@ class Cursor extends Agent implements SupportsGuidelines, SupportsMcp, SupportsS
   {
     return match ($platform)
     {
-      Platform::Darwin => [
+      Platform::Darwin  => [
         'paths' => ['/Applications/Cursor.app'],
       ],
-      Platform::Linux => [
+      Platform::Linux   => [
         'paths' => [
           '/opt/cursor',
           '/usr/local/bin/cursor',

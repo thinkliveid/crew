@@ -20,7 +20,6 @@ class TomlFileWriter
   public function configKey(string $key): self
   {
     $this->configKey = $key;
-
     return $this;
   }
 
@@ -29,7 +28,7 @@ class TomlFileWriter
   {
     $this->serversToAdd[$key] = array_filter(
       $config,
-      fn($value): bool => !in_array($value, [[], null, ''], true)
+      static fn($value): bool => !in_array($value, [[], null, ''], true)
     );
 
     return $this;
@@ -54,7 +53,6 @@ class TomlFileWriter
   protected function createNewFile(): bool
   {
     $lines = [];
-
     foreach ($this->baseConfig as $key => $value)
     {
       if (!is_array($value))
@@ -79,7 +77,6 @@ class TomlFileWriter
   protected function updateExistingFile(): bool
   {
     $content = file_get_contents($this->filePath);
-
     foreach ($this->serversToAdd as $key => $config)
     {
       if ($this->serverExists($content, $key))
@@ -100,7 +97,6 @@ class TomlFileWriter
   {
     $lines = [];
     $lines[] = "[{$this->configKey}.{$key}]";
-
     foreach ($config as $field => $value)
     {
       if ($field === 'env' && is_array($value))
@@ -115,7 +111,6 @@ class TomlFileWriter
     {
       $lines[] = '';
       $lines[] = "[{$this->configKey}.{$key}.env]";
-
       foreach ($config['env'] as $envKey => $envValue)
       {
         $lines[] = "{$envKey} = " . $this->formatValue($envValue);
@@ -135,7 +130,6 @@ class TomlFileWriter
     if (is_array($value))
     {
       $items = array_map($this->formatValue(...), $value);
-
       return '[' . implode(', ', $items) . ']';
     }
 
@@ -161,7 +155,6 @@ class TomlFileWriter
   protected function serverExists(string $content, string $key): bool
   {
     $pattern = '/^\[' . preg_quote($this->configKey, '/') . '\.' . preg_quote($key, '/') . '\]/m';
-
     return (bool)preg_match($pattern, $content);
   }
 

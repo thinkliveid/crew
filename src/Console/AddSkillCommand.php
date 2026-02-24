@@ -29,10 +29,7 @@ class AddSkillCommand extends Command
 {
   use DisplayHelper;
 
-  public function __construct(
-    protected Config $config,
-    protected AgentsDetector $agentsDetector,
-  )
+  public function __construct(protected Config $config, protected AgentsDetector $agentsDetector)
   {
     parent::__construct();
   }
@@ -54,7 +51,6 @@ class AddSkillCommand extends Command
     }
 
     $repos = $this->resolveRepositories($input, $io);
-
     if (empty($repos))
     {
       if ($interactive)
@@ -79,7 +75,6 @@ class AddSkillCommand extends Command
   protected function resolveRepositories(InputInterface $input, SymfonyStyle $io): array
   {
     $argument = $input->getArgument('repository');
-
     if ($argument !== null)
     {
       return [$argument];
@@ -122,7 +117,6 @@ class AddSkillCommand extends Command
 
       $allRepos[] = $repository->fullName();
       $io->text("Discovering skills in <info>{$repository->fullName()}</info>...");
-
       $provider = new GitHubSkillProvider($repository, $this->config);
 
       try
@@ -154,11 +148,10 @@ class AddSkillCommand extends Command
           array_values($choices),
           implode(',', array_keys(array_values($choices))),
         );
-        $question->setMultiselect(true);
 
+        $question->setMultiselect(true);
         $helper = $this->getHelper('question');
         $selected = $helper->ask($input, $output, $question);
-
         $skillsToInstall = array_filter($skills, fn($skill) => in_array($skill->name, $selected, true));
       }
       else
@@ -167,7 +160,6 @@ class AddSkillCommand extends Command
       }
 
       $skillPaths = $this->getSkillPaths();
-
       foreach ($skillsToInstall as $skill)
       {
         foreach ($skillPaths as $agentDisplayName => $basePath)
@@ -228,7 +220,6 @@ class AddSkillCommand extends Command
   protected function writeSkillGuidelines(bool $interactive, SymfonyStyle $io): void
   {
     $agentNames = $this->config->getAgents();
-
     if (empty($agentNames))
     {
       return;
@@ -252,7 +243,6 @@ class AddSkillCommand extends Command
 
       /** @var Agent&SupportsGuidelines $agent */
       $skills = $writer->collectSkillInfo($agent);
-
       if (empty($skills))
       {
         continue;

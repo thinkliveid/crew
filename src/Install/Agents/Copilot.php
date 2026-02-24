@@ -30,10 +30,10 @@ class Copilot extends Agent implements SupportsGuidelines, SupportsMcp, Supports
   {
     return match ($platform)
     {
-      Platform::Darwin => [
+      Platform::Darwin  => [
         'paths' => ['/Applications/Visual Studio Code.app'],
       ],
-      Platform::Linux => [
+      Platform::Linux   => [
         'command' => 'command -v code',
       ],
       Platform::Windows => [

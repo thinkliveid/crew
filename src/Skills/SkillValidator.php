@@ -123,12 +123,9 @@ class SkillValidator
     }
 
     // 8. Validate 'allowed-tools' (optional)
-    if (isset($frontmatter['allowed-tools']))
+    if (isset($frontmatter['allowed-tools']) && !is_string($frontmatter['allowed-tools']))
     {
-      if (!is_string($frontmatter['allowed-tools']))
-      {
-        $errors[] = 'allowed-tools must be a string';
-      }
+      $errors[] = 'allowed-tools must be a string';
     }
 
     if (!empty($errors))

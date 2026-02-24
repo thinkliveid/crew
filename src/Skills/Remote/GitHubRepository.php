@@ -18,7 +18,6 @@ class GitHubRepository
   public static function fromInput(string $input): self
   {
     $input = self::normalizeUrl($input);
-
     return self::parseOwnerRepoPath($input);
   }
 
@@ -42,14 +41,12 @@ class GitHubRepository
 
     $host = $parsed['host'] ?? '';
     $isGitHubUrl = $host === 'github.com' || str_ends_with($host, '.github.com');
-
     if (!$isGitHubUrl)
     {
       throw new InvalidArgumentException('Only GitHub URLs are supported.');
     }
 
     $path = trim($parsed['path'] ?? '', '/');
-
     if (str_contains($path, '/tree/'))
     {
       return preg_replace('#/tree/[^/]+#', '', $path);

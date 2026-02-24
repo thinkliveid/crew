@@ -29,7 +29,7 @@ class OpenCode extends Agent implements SupportsGuidelines, SupportsMcp, Support
       Platform::Darwin, Platform::Linux => [
         'command' => 'command -v opencode',
       ],
-      Platform::Windows => [
+      Platform::Windows                 => [
         'command' => 'cmd /c where opencode 2>nul',
       ],
     };
@@ -40,11 +40,6 @@ class OpenCode extends Agent implements SupportsGuidelines, SupportsMcp, Support
     return [
       'files' => ['AGENTS.md', 'opencode.json'],
     ];
-  }
-
-  public function mcpInstallationStrategy(): McpInstallationStrategy
-  {
-    return McpInstallationStrategy::File;
   }
 
   public function mcpConfigPath(): string

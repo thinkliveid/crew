@@ -11,9 +11,9 @@ class ValidationResult
    * @param array<string, mixed> $frontmatter
    */
   public function __construct(
-    public readonly bool $valid,
-    public readonly array $errors = [],
-    public readonly array $frontmatter = [],
+    public readonly bool   $valid,
+    public readonly array  $errors = [],
+    public readonly array  $frontmatter = [],
     public readonly string $body = '',
   )
   {

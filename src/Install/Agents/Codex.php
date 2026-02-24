@@ -29,7 +29,7 @@ class Codex extends Agent implements SupportsGuidelines, SupportsMcp, SupportsSk
       Platform::Darwin, Platform::Linux => [
         'command' => 'which codex',
       ],
-      Platform::Windows => [
+      Platform::Windows                 => [
         'command' => 'cmd /c where codex 2>nul',
       ],
     };
@@ -46,11 +46,6 @@ class Codex extends Agent implements SupportsGuidelines, SupportsMcp, SupportsSk
   public function guidelinesPath(): string
   {
     return 'AGENTS.md';
-  }
-
-  public function mcpInstallationStrategy(): McpInstallationStrategy
-  {
-    return McpInstallationStrategy::File;
   }
 
   public function mcpConfigPath(): string
@@ -80,7 +75,7 @@ class Codex extends Agent implements SupportsGuidelines, SupportsMcp, SupportsSk
       'args' => $args,
       'cwd' => getcwd(),
       'env' => $env,
-    ], fn($value): bool => !in_array($value, [[], null, ''], true));
+    ], static fn($value): bool => !in_array($value, [[], null, ''], true));
   }
 
   public function skillsPath(): string
