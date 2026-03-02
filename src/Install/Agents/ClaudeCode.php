@@ -7,10 +7,12 @@ namespace Thinkliveid\Crew\Install\Agents;
 use Thinkliveid\Crew\Contracts\SupportsGuidelines;
 use Thinkliveid\Crew\Contracts\SupportsMcp;
 use Thinkliveid\Crew\Contracts\SupportsSkills;
+use Thinkliveid\Crew\Contracts\SupportsSubAgents;
+use Thinkliveid\Crew\Contracts\SupportsTeams;
 use Thinkliveid\Crew\Enums\McpInstallationStrategy;
 use Thinkliveid\Crew\Enums\Platform;
 
-class ClaudeCode extends Agent implements SupportsGuidelines, SupportsMcp, SupportsSkills
+class ClaudeCode extends Agent implements SupportsGuidelines, SupportsMcp, SupportsSkills, SupportsSubAgents, SupportsTeams
 {
   public function name(): string
   {
@@ -56,5 +58,15 @@ class ClaudeCode extends Agent implements SupportsGuidelines, SupportsMcp, Suppo
   public function skillsPath(): string
   {
     return '.claude/skills';
+  }
+
+  public function subAgentsPath(): string
+  {
+    return '.claude/agents';
+  }
+
+  public function teamsPath(): string
+  {
+    return '.claude/teams';
   }
 }

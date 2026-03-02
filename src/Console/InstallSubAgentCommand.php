@@ -6,26 +6,26 @@ namespace Thinkliveid\Crew\Console;
 
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Console\Input\ArrayInput;
 use Thinkliveid\Crew\Concerns\DisplayHelper;
 use Thinkliveid\Crew\Contracts\SupportsGuidelines;
-use Thinkliveid\Crew\Contracts\SupportsSkills;
+use Thinkliveid\Crew\Contracts\SupportsSubAgents;
 use Thinkliveid\Crew\Install\AgentsDetector;
 use Thinkliveid\Crew\Install\Agents\Agent;
 use Thinkliveid\Crew\Install\GuidelineWriter;
-use Thinkliveid\Crew\Skills\BuiltIn\BuiltInSkillProvider;
-use Thinkliveid\Crew\Skills\Local\LocalSkillProvider;
+use Thinkliveid\Crew\SubAgents\BuiltIn\BuiltInSubAgentProvider;
+use Thinkliveid\Crew\SubAgents\Local\LocalSubAgentProvider;
 use Thinkliveid\Crew\Support\Config;
 
 #[AsCommand(
-  name: 'install:skill',
-  description: 'Detect agents, sync local skills, and store configuration'
+  name: 'install:subagent',
+  description: 'Detect agents, sync local sub-agents, and store configuration'
 )]
-class InstallCommand extends Command
+class InstallSubAgentCommand extends Command
 {
   use DisplayHelper;
 
@@ -54,7 +54,7 @@ class InstallCommand extends Command
 
     if ($interactive)
     {
-      $this->displayBoostHeader('Skills', basename(getcwd()));
+      $this->displayBoostHeader('Sub-agents', basename(getcwd()));
     }
 
     if ($skipDetection)
@@ -81,18 +81,18 @@ class InstallCommand extends Command
       }
     }
 
-    // --- Publish built-in skills to .ai/skills/ ---
+    // --- Publish built-in sub-agents to .ai/agents/ ---
     $selectedAgents = $this->resolveAgentInstances($selectedAgentNames);
-    $this->publishBuiltInSkills($interactive, $io);
+    $this->publishBuiltInSubAgents($interactive, $io);
 
-    // --- Local skill sync per agent ---
-    $this->syncLocalSkillsForAgents($selectedAgents, $interactive, $io);
+    // --- Local sub-agent sync per agent ---
+    $this->syncLocalSubAgentsForAgents($selectedAgents, $interactive, $io);
 
-    // --- GitHub skill install from crew.json ---
-    $this->installConfiguredSkills($interactive, $io, $output);
+    // --- GitHub sub-agent install from crew.json ---
+    $this->installConfiguredSubAgents($interactive, $io, $output);
 
-    // --- Write skill activation to guideline files ---
-    $this->writeSkillGuidelines($selectedAgents, $interactive, $io);
+    // --- Write guidelines ---
+    $this->writeGuidelines($selectedAgents, $interactive, $io);
 
     return Command::SUCCESS;
   }
@@ -114,7 +114,6 @@ class InstallCommand extends Command
       return [];
     }
 
-    // Build name => displayName map
     $options = [];
     foreach ($allAgents as $agent)
     {
@@ -123,7 +122,6 @@ class InstallCommand extends Command
 
     asort($options);
 
-    // Determine defaults: saved config first, then auto-detected
     $savedAgents = $this->config->getAgents();
     $validSaved = array_filter($savedAgents, fn(string $name): bool => isset($options[$name]));
 
@@ -137,13 +135,11 @@ class InstallCommand extends Command
       $defaults = array_values(array_filter($detected, fn(string $name): bool => isset($options[$name])));
     }
 
-    // Non-interactive: use defaults without prompting
     if (!$interactive)
     {
       return $defaults;
     }
 
-    // Interactive: only show detected/saved agents
     $io->section('Agent Detection');
 
     $detected = array_unique(array_merge($this->systemInstalledAgents, $this->projectInstalledAgents));
@@ -179,8 +175,6 @@ class InstallCommand extends Command
   }
 
   /**
-   * Resolve agent instances from names via AgentsDetector.
-   *
    * @param array<string> $names
    * @return array<Agent>
    */
@@ -193,25 +187,21 @@ class InstallCommand extends Command
   }
 
   /**
-   * Sync local skills to each selected agent that supports skills.
-   *
    * @param array<Agent> $agents
    */
-  private function syncLocalSkillsForAgents(array $agents, bool $interactive, SymfonyStyle $io): void
+  private function syncLocalSubAgentsForAgents(array $agents, bool $interactive, SymfonyStyle $io): void
   {
     $basePath = getcwd();
 
-    // Discover local skills once (source is always .ai/skills)
-    $sourceProvider = new LocalSkillProvider($basePath);
-    $localSkills = $sourceProvider->discoverSkills();
+    $sourceProvider = new LocalSubAgentProvider($basePath);
+    $localSubAgents = $sourceProvider->discoverSubAgents();
 
-    // Report validation errors for invalid skills
-    $invalidSkills = $sourceProvider->getInvalidSkills();
+    $invalidSubAgents = $sourceProvider->getInvalidSubAgents();
 
-    if (!empty($invalidSkills) && $interactive)
+    if (!empty($invalidSubAgents) && $interactive)
     {
-      $io->warning('Some local skills failed validation and will be skipped:');
-      foreach ($invalidSkills as $name => $result)
+      $io->warning('Some local sub-agents failed validation and will be skipped:');
+      foreach ($invalidSubAgents as $name => $result)
       {
         $io->text(sprintf('  <comment>%s</comment>:', $name));
         foreach ($result->errors as $error)
@@ -223,81 +213,76 @@ class InstallCommand extends Command
       $io->newLine();
     }
 
-    if (empty($localSkills))
+    if (empty($localSubAgents))
     {
       if ($interactive)
       {
-        $io->info('No valid local skills found in .ai/skills/.');
+        $io->info('No valid local sub-agents found in .ai/agents/.');
       }
       return;
     }
 
-    // Filter agents that support skills
-    $skillAgents = array_filter($agents, fn(Agent $agent): bool => $agent instanceof SupportsSkills);
-    if (empty($skillAgents))
+    $subAgentAgents = array_filter($agents, fn(Agent $agent): bool => $agent instanceof SupportsSubAgents);
+    if (empty($subAgentAgents))
     {
       if ($interactive)
       {
-        $io->warning('No selected agents support skills.');
+        $io->warning('No selected agents support sub-agents.');
       }
       return;
     }
 
     if ($interactive)
     {
-      $io->section('Local Skills');
-      $io->listing($localSkills);
+      $io->section('Local Sub-agents');
+      $io->listing($localSubAgents);
 
-      $agentNames = array_map(fn(Agent $a): string => $a->displayName(), $skillAgents);
+      $agentNames = array_map(fn(Agent $a): string => $a->displayName(), $subAgentAgents);
       $proceed = $io->confirm(
-        sprintf('Sync these local skills to %s?', implode(', ', $agentNames)),
+        sprintf('Sync these local sub-agents to %s?', implode(', ', $agentNames)),
         true
       );
 
       if (!$proceed)
       {
-        $io->comment('Skipped local skill sync.');
+        $io->comment('Skipped local sub-agent sync.');
         return;
       }
     }
 
-    foreach ($skillAgents as $agent)
+    foreach ($subAgentAgents as $agent)
     {
-      /** @var Agent&SupportsSkills $agent */
-      $targetPath = $basePath . '/' . $agent->skillsPath();
-      $provider = new LocalSkillProvider($basePath, $targetPath);
+      /** @var Agent&SupportsSubAgents $agent */
+      $targetPath = $basePath . '/' . $agent->subAgentsPath();
+      $provider = new LocalSubAgentProvider($basePath, $targetPath);
       $synced = $provider->syncAll();
       if (!empty($synced) && $interactive)
       {
         $io->text(sprintf(
-          '  <info>%s</info>: synced %d skill(s) to %s',
+          '  <info>%s</info>: synced %d sub-agent(s) to %s',
           $agent->displayName(),
           count($synced),
-          $agent->skillsPath()
+          $agent->subAgentsPath()
         ));
       }
     }
 
     if ($interactive)
     {
-      $io->success('Local skills synced to all selected agents.');
+      $io->success('Local sub-agents synced to all selected agents.');
     }
   }
 
-  /**
-   * Publish built-in skills from the package to the project's .ai/skills/ directory.
-   */
-  private function publishBuiltInSkills(bool $interactive, SymfonyStyle $io): void
+  private function publishBuiltInSubAgents(bool $interactive, SymfonyStyle $io): void
   {
-    $provider = new BuiltInSkillProvider(getcwd());
+    $provider = new BuiltInSubAgentProvider(getcwd());
     $published = $provider->publishAll();
 
-    // Report validation errors for built-in skills
-    $invalidSkills = $provider->getInvalidSkills();
-    if (!empty($invalidSkills) && $interactive)
+    $invalidSubAgents = $provider->getInvalidSubAgents();
+    if (!empty($invalidSubAgents) && $interactive)
     {
-      $io->warning('Some built-in skills failed validation and will be skipped:');
-      foreach ($invalidSkills as $name => $result)
+      $io->warning('Some built-in sub-agents failed validation and will be skipped:');
+      foreach ($invalidSubAgents as $name => $result)
       {
         $io->text(sprintf('  <comment>%s</comment>:', $name));
         foreach ($result->errors as $error)
@@ -311,18 +296,16 @@ class InstallCommand extends Command
 
     if (!empty($published) && $interactive)
     {
-      $io->section('Built-in Skills');
-      $io->text(sprintf('Published %d built-in skill(s) to .ai/skills/:', count($published)));
+      $io->section('Built-in Sub-agents');
+      $io->text(sprintf('Published %d built-in sub-agent(s) to .ai/agents/:', count($published)));
       $io->listing($published);
     }
   }
 
   /**
-   * Write skill activation to guideline files for agents that support guidelines.
-   *
    * @param array<Agent> $agents
    */
-  private function writeSkillGuidelines(array $agents, bool $interactive, SymfonyStyle $io): void
+  private function writeGuidelines(array $agents, bool $interactive, SymfonyStyle $io): void
   {
     $basePath = getcwd();
     $writer = new GuidelineWriter($basePath);
@@ -357,18 +340,15 @@ class InstallCommand extends Command
 
     if (!empty($written) && $interactive)
     {
-      $io->section('Skill Guidelines');
-      $io->text('Updated guideline files with skill activation:');
+      $io->section('Guidelines');
+      $io->text('Updated guideline files:');
       $io->listing($written);
     }
   }
 
-  /**
-   * Install GitHub skills listed in crew.json via add:skill command.
-   */
-  private function installConfiguredSkills(bool $interactive, SymfonyStyle $io, OutputInterface $output): void
+  private function installConfiguredSubAgents(bool $interactive, SymfonyStyle $io, OutputInterface $output): void
   {
-    $repos = $this->config->getSkills();
+    $repos = $this->config->getSubAgents();
     if (empty($repos))
     {
       return;
@@ -376,26 +356,26 @@ class InstallCommand extends Command
 
     if ($interactive)
     {
-      $io->section('GitHub Skills');
+      $io->section('GitHub Sub-agents');
       $io->listing($repos);
 
-      $proceed = $io->confirm('Install skills from these repositories?', true);
+      $proceed = $io->confirm('Install sub-agents from these repositories?', true);
       if (!$proceed)
       {
-        $io->comment('Skipped GitHub skill installation.');
+        $io->comment('Skipped GitHub sub-agent installation.');
         return;
       }
     }
 
-    $addSkillCommand = $this->getApplication()->find('add:skill');
+    $addCommand = $this->getApplication()->find('add:subagent');
     foreach ($repos as $repo)
     {
-      $addSkillInput = new ArrayInput([
+      $addInput = new ArrayInput([
         'repository' => $repo,
         '--no-interaction' => true,
       ]);
 
-      $addSkillCommand->run($addSkillInput, $output);
+      $addCommand->run($addInput, $output);
     }
   }
 }

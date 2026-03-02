@@ -41,6 +41,40 @@ class Config
     return $this->getSkills() !== [];
   }
 
+  /** @return array<int, string> */
+  public function getSubAgents(): array
+  {
+    return $this->get('subagents', []);
+  }
+
+  /** @param array<int, string> $subAgents */
+  public function setSubAgents(array $subAgents): void
+  {
+    $this->set('subagents', $subAgents);
+  }
+
+  public function hasSubAgents(): bool
+  {
+    return $this->getSubAgents() !== [];
+  }
+
+  /** @return array<int, string> */
+  public function getTeams(): array
+  {
+    return $this->get('teams', []);
+  }
+
+  /** @param array<int, string> $teams */
+  public function setTeams(array $teams): void
+  {
+    $this->set('teams', $teams);
+  }
+
+  public function hasTeams(): bool
+  {
+    return $this->getTeams() !== [];
+  }
+
   public function getMcp(): bool
   {
     return (bool)$this->get('mcp', false);

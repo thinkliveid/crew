@@ -13,19 +13,19 @@ use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Thinkliveid\Crew\Concerns\DisplayHelper;
 use Thinkliveid\Crew\Contracts\SupportsGuidelines;
-use Thinkliveid\Crew\Contracts\SupportsSkills;
+use Thinkliveid\Crew\Contracts\SupportsSubAgents;
 use Thinkliveid\Crew\Install\AgentsDetector;
 use Thinkliveid\Crew\Install\Agents\Agent;
 use Thinkliveid\Crew\Install\GuidelineWriter;
 use Thinkliveid\Crew\Skills\Remote\GitHubRepository;
-use Thinkliveid\Crew\Skills\Remote\GitHubSkillProvider;
+use Thinkliveid\Crew\SubAgents\Remote\GitHubSubAgentProvider;
 use Thinkliveid\Crew\Support\Config;
 
 #[AsCommand(
-  name: 'add:skill',
-  description: 'Add skills from a GitHub repository'
+  name: 'add:subagent',
+  description: 'Add sub-agents from a GitHub repository'
 )]
-class AddSkillCommand extends Command
+class AddSubAgentCommand extends Command
 {
   use DisplayHelper;
 
@@ -47,7 +47,7 @@ class AddSkillCommand extends Command
 
     if ($interactive)
     {
-      $this->displayBoostHeader('Add Skill', basename(getcwd()));
+      $this->displayBoostHeader('Add Sub-agent', basename(getcwd()));
     }
 
     $repos = $this->resolveRepositories($input, $io);
@@ -61,10 +61,10 @@ class AddSkillCommand extends Command
       return Command::SUCCESS;
     }
 
-    $this->installGitHubSkills($repos, $interactive, $io, $input, $output);
+    $this->installGitHubSubAgents($repos, $interactive, $io, $input, $output);
 
-    // --- Write skill activation to guideline files ---
-    $this->writeSkillGuidelines($interactive, $io);
+    // --- Write guidelines ---
+    $this->writeGuidelines($interactive, $io);
 
     return Command::SUCCESS;
   }
@@ -82,7 +82,7 @@ class AddSkillCommand extends Command
 
     if ($input->isInteractive())
     {
-      $repo = $io->ask('Enter a GitHub repository (owner/repo) to install skills from (leave empty to skip)', '');
+      $repo = $io->ask('Enter a GitHub repository (owner/repo) to install sub-agents from (leave empty to skip)', '');
 
       if ($repo !== '' && $repo !== null)
       {
@@ -92,15 +92,15 @@ class AddSkillCommand extends Command
       return [];
     }
 
-    return $this->config->getSkills();
+    return $this->config->getSubAgents();
   }
 
   /**
    * @param array<int, string> $repos
    */
-  protected function installGitHubSkills(array $repos, bool $interactive, SymfonyStyle $io, InputInterface $input, OutputInterface $output): void
+  protected function installGitHubSubAgents(array $repos, bool $interactive, SymfonyStyle $io, InputInterface $input, OutputInterface $output): void
   {
-    $io->section('GitHub Skills');
+    $io->section('GitHub Sub-agents');
     $allRepos = [];
 
     foreach ($repos as $repoInput)
@@ -116,12 +116,12 @@ class AddSkillCommand extends Command
       }
 
       $allRepos[] = $repository->fullName();
-      $io->text("Discovering skills in <info>{$repository->fullName()}</info>...");
-      $provider = new GitHubSkillProvider($repository, $this->config);
+      $io->text("Discovering sub-agents in <info>{$repository->fullName()}</info>...");
+      $provider = new GitHubSubAgentProvider($repository, $this->config);
 
       try
       {
-        $skills = $provider->discoverSkills();
+        $subAgents = $provider->discoverSubAgents();
       }
       catch (\RuntimeException $e)
       {
@@ -129,22 +129,22 @@ class AddSkillCommand extends Command
         continue;
       }
 
-      if (empty($skills))
+      if (empty($subAgents))
       {
-        $io->warning("No skills found in {$repository->fullName()}.");
+        $io->warning("No sub-agents found in {$repository->fullName()}.");
         continue;
       }
 
       if ($interactive)
       {
         $choices = [];
-        foreach ($skills as $skill)
+        foreach ($subAgents as $agent)
         {
-          $choices[$skill->name] = $skill->name;
+          $choices[$agent->name] = $agent->name;
         }
 
         $question = new ChoiceQuestion(
-          "Select skills to install from {$repository->fullName()} (comma-separated numbers)",
+          "Select sub-agents to install from {$repository->fullName()} (comma-separated numbers)",
           array_values($choices),
           implode(',', array_keys(array_values($choices))),
         );
@@ -152,72 +152,67 @@ class AddSkillCommand extends Command
         $question->setMultiselect(true);
         $helper = $this->getHelper('question');
         $selected = $helper->ask($input, $output, $question);
-        $skillsToInstall = array_filter($skills, fn($skill) => in_array($skill->name, $selected, true));
+        $agentsToInstall = array_filter($subAgents, fn($agent) => in_array($agent->name, $selected, true));
       }
       else
       {
-        $skillsToInstall = $skills;
+        $agentsToInstall = $subAgents;
       }
 
-      $skillPaths = $this->getSkillPaths();
-      foreach ($skillsToInstall as $skill)
+      $targetPaths = $this->getSubAgentPaths();
+      foreach ($agentsToInstall as $agent)
       {
-        foreach ($skillPaths as $agentDisplayName => $basePath)
+        foreach ($targetPaths as $agentDisplayName => $basePath)
         {
-          $targetPath = $basePath . '/' . $skill->name;
-          $io->text("  Installing <info>{$skill->name}</info> → {$agentDisplayName}...");
+          $io->text("  Installing <info>{$agent->name}</info> → {$agentDisplayName}...");
 
-          $success = $provider->downloadSkill($skill, $targetPath);
+          $success = $provider->downloadSubAgent($agent, $basePath);
           if ($success)
           {
-            $io->text("  <info>✓</info> {$skill->name} → {$agentDisplayName}");
+            $io->text("  <info>✓</info> {$agent->name} → {$agentDisplayName}");
           }
           else
           {
-            $io->text("  <error>✗</error> Failed to download {$skill->name} for {$agentDisplayName}");
+            $io->text("  <error>✗</error> Failed to download {$agent->name} for {$agentDisplayName}");
           }
         }
       }
     }
 
     // Persist repos to crew.json
-    $existingRepos = $this->config->getSkills();
+    $existingRepos = $this->config->getSubAgents();
     $mergedRepos = array_values(array_unique(array_merge($existingRepos, $allRepos)));
-    $this->config->setSkills($mergedRepos);
+    $this->config->setSubAgents($mergedRepos);
   }
 
   /**
-   * Get skill target paths for configured agents.
-   * Falls back to .claude/skills if no agents are configured.
+   * Get sub-agent target paths for configured agents.
    *
    * @return array<string, string> displayName => absolute path
    */
-  protected function getSkillPaths(): array
+  protected function getSubAgentPaths(): array
   {
     $agentNames = $this->config->getAgents();
     $basePath = getcwd();
 
     if (empty($agentNames))
     {
-      return ['default' => $basePath . '/.claude/skills'];
+      return ['default' => $basePath . '/.claude/agents'];
     }
 
     $paths = [];
     foreach ($this->agentsDetector->getAgents() as $agent)
     {
-      if (in_array($agent->name(), $agentNames, true) && $agent instanceof SupportsSkills)
+      if (in_array($agent->name(), $agentNames, true) && $agent instanceof SupportsSubAgents)
       {
-        $paths[$agent->displayName()] = $basePath . '/' . $agent->skillsPath();
+        $paths[$agent->displayName()] = $basePath . '/' . $agent->subAgentsPath();
       }
     }
 
-    return !empty($paths) ? $paths : ['default' => $basePath . '/.claude/skills'];
+    return !empty($paths) ? $paths : ['default' => $basePath . '/.claude/agents'];
   }
 
-  /**
-   * Write skill activation to guideline files for configured agents.
-   */
-  protected function writeSkillGuidelines(bool $interactive, SymfonyStyle $io): void
+  protected function writeGuidelines(bool $interactive, SymfonyStyle $io): void
   {
     $agentNames = $this->config->getAgents();
     if (empty($agentNames))
@@ -259,8 +254,8 @@ class AddSkillCommand extends Command
 
     if (!empty($written) && $interactive)
     {
-      $io->section('Skill Guidelines');
-      $io->text('Updated guideline files with skill activation:');
+      $io->section('Guidelines');
+      $io->text('Updated guideline files:');
       $io->listing($written);
     }
   }
