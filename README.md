@@ -1,8 +1,8 @@
 # Crew
 
-A PHP CLI tool for managing AI agent skills, guidelines, and MCP (Model Context Protocol) configurations across multiple IDE coding assistants.
+A PHP CLI tool for managing AI agent skills, sub-agents, and team templates across multiple IDE coding assistants.
 
-Crew discovers which AI agents are installed on your system, downloads skills from GitHub repositories, syncs local skills, and writes configurations to the correct agent-specific directories — all from a single command.
+Crew discovers which AI agents are installed on your system, downloads resources from GitHub repositories, syncs local definitions, and writes configurations to the correct agent-specific directories — all from a single command.
 
 ## Requirements
 
@@ -15,17 +15,14 @@ Crew discovers which AI agents are installed on your system, downloads skills fr
 composer require thinkliveid/crew
 ```
 
-Or install as a project dependency:
-
-```bash
-composer require thinkliveid/crew
-```
-
 ## Quick Start
 
 ```bash
-# Detect agents, select them, sync local skills, and install GitHub skills
+# Full setup: detect agents, sync local skills, install GitHub skills
 crew install:skill
+
+# Create a new skill from scratch
+crew new:skill
 
 # Add skills from a GitHub repository
 crew add:skill owner/repo
@@ -48,21 +45,53 @@ Crew auto-detects the following AI coding assistants on your system and in your 
 | Codex | `.agents/skills` | `.codex/config.toml` |
 | OpenCode | `.agents/skills` | `opencode.json` |
 
-When you run `crew install:skill`, only detected agents are shown for selection. Skills and configurations are written to the correct paths for each selected agent.
+When you run `crew install:skill`, only detected agents are shown for selection. Resources are written to the correct paths for each selected agent.
 
 ## Commands
 
-### `install:skill`
+Crew organises commands into four groups across three resource types:
 
-The main command. Runs the full setup flow:
+| | Skills | Sub-agents | Teams |
+|---|---|---|---|
+| **new** | `new:skill` | `new:subagent` | `new:team` |
+| **install** | `install:skill` | `install:subagent` | `install:team` |
+| **add** | `add:skill` | `add:subagent` | `add:team` |
+| **update** | `update:skill` | `update:subagent` | `update:team` |
 
-1. **Detect agents** — scans system and project for installed AI agents
-2. **Select agents** — prompts to confirm which agents to configure (detected agents default to yes)
-3. **Sync local skills** — copies skills from `.ai/skills/` to each agent's skill directory
-4. **Install GitHub skills** — downloads skills from repositories listed in `crew.json`
+### `new:*` — Scaffold a new resource locally
+
+Create a new skill, sub-agent, or team definition from scratch with an interactive prompt.
+
+```bash
+# Interactive — prompts for name and description
+crew new:skill
+crew new:subagent
+crew new:team
+
+# Provide the name upfront to skip the name prompt
+crew new:skill my-skill
+crew new:subagent my-agent
+crew new:team my-team
+```
+
+Generated files:
+
+| Command | Output |
+|---------|--------|
+| `new:skill` | `.ai/skills/{name}/SKILL.md` |
+| `new:subagent` | `.ai/agents/{name}.md` |
+| `new:team` | `.ai/teams/{name}/TEAM.md` |
+
+Names must be lowercase alphanumeric with hyphens (1–64 chars, no leading/trailing/consecutive hyphens). `new:subagent` also prompts for a model choice (`sonnet`, `opus`, `haiku`, or `inherit`).
+
+### `install:*` — Full setup flow
+
+Runs the complete setup: detect agents, select them, sync local resources, and install from GitHub.
 
 ```bash
 crew install:skill
+crew install:subagent
+crew install:team
 ```
 
 Non-interactive mode (uses auto-detected agents, skips prompts):
@@ -71,29 +100,33 @@ Non-interactive mode (uses auto-detected agents, skips prompts):
 crew install:skill --no-interaction
 ```
 
-### `add:skill`
+### `add:*` — Add from a GitHub repository
 
-Add skills from a GitHub repository. Crew discovers skills by looking for directories containing a `SKILL.md` file.
+Discover and install resources from a GitHub repository. The repository is saved to `crew.json` for future installs and updates.
 
 ```bash
 # Interactive — prompts for repository if not provided
 crew add:skill
+crew add:subagent
+crew add:team
 
 # Direct — provide the repository
 crew add:skill owner/repo
+crew add:subagent owner/repo
+crew add:team owner/repo
 
 # Full GitHub URL with branch and subdirectory
 crew add:skill https://github.com/owner/repo/tree/main/path/to/skills
 ```
 
-The repository is saved to `crew.json` so future installs and updates include it.
+### `update:*` — Update to the latest version
 
-### `update:skill`
-
-Re-runs `install:skill` in non-interactive mode to refresh all local and GitHub skills.
+Re-runs the install flow in non-interactive mode to refresh all local and GitHub resources.
 
 ```bash
 crew update:skill
+crew update:subagent
+crew update:team
 ```
 
 ## Configuration
@@ -103,7 +136,9 @@ Crew stores its configuration in `crew.json` at the project root:
 ```json
 {
     "agents": ["claude_code", "junie"],
-    "skills": ["owner/repo", "another/repo"]
+    "skills": ["owner/repo"],
+    "subagents": ["owner/repo"],
+    "teams": ["owner/repo"]
 }
 ```
 
@@ -111,7 +146,9 @@ Crew stores its configuration in `crew.json` at the project root:
 |-----|------|-------------|
 | `agents` | `string[]` | Selected agent identifiers |
 | `skills` | `string[]` | GitHub repositories to install skills from |
-| `guidelines` | `bool` | Whether guidelines are enabled |
+| `subagents` | `string[]` | GitHub repositories to install sub-agents from |
+| `teams` | `string[]` | GitHub repositories to install team templates from |
+| `guidelines` | `bool` | Whether guideline writing is enabled |
 | `mcp` | `bool` | Whether MCP configuration is enabled |
 | `github_token` | `string` | GitHub API token for private repositories |
 
@@ -131,35 +168,38 @@ Or use an environment variable:
 export GITHUB_TOKEN=ghp_your_token_here
 ```
 
-## Skills
+## Project Structure
 
-### Local Skills
+### Local Resources
 
-Place skills in your project's `.ai/skills/` directory. Each skill is a subdirectory containing a `SKILL.md` file:
+Place resources in your project's `.ai/` directory:
 
 ```
-.ai/skills/
-  my-skill/
-    SKILL.md
-    other-files...
+.ai/
+  skills/
+    my-skill/
+      SKILL.md
+      other-files...
+  agents/
+    my-agent.md
+  teams/
+    my-team/
+      TEAM.md
 ```
 
-Running `crew install:skill` copies these to each selected agent's skill directory (e.g., `.claude/skills/my-skill/`, `.junie/skills/my-skill/`).
+Running `crew install:skill` copies skills from `.ai/skills/` to each selected agent's skill directory (e.g., `.claude/skills/my-skill/`, `.junie/skills/my-skill/`). The same pattern applies to sub-agents and teams.
 
-### Remote Skills (GitHub)
+### Remote Resources (GitHub)
 
-Crew discovers skills in GitHub repositories by traversing the repo tree and looking for `SKILL.md` files. Common search paths:
-
-- `skills/`
-- `.ai/skills/`
-- `.cursor/skills/`
-- `.claude/skills/`
+Crew discovers resources in GitHub repositories by traversing the repo tree and looking for marker files (`SKILL.md`, agent markdown files, `TEAM.md`).
 
 ## Architecture
 
 Crew is built with a contract-driven architecture. Each agent implements interfaces that define its capabilities:
 
 - **SupportsSkills** — agent can receive skill files
+- **SupportsSubAgents** — agent can receive sub-agent definitions
+- **SupportsTeams** — agent can receive team templates
 - **SupportsGuidelines** — agent can receive guideline files
 - **SupportsMcp** — agent can receive MCP server configurations
 
