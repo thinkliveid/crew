@@ -18,7 +18,10 @@ composer require thinkliveid/crew
 ## Quick Start
 
 ```bash
-# Full setup: detect agents, sync local skills, install GitHub skills
+# One-shot setup: install skills, sub-agents, and team templates together
+crew init
+
+# Or run a single resource type
 crew install:skill
 
 # Create a new skill from scratch
@@ -49,7 +52,7 @@ When you run `crew install:skill`, only detected agents are shown for selection.
 
 ## Commands
 
-Crew organises commands into four groups across three resource types:
+Crew organises commands into four groups across three resource types, plus a top-level `init` that runs all three installers in one pass:
 
 | | Skills | Sub-agents | Teams |
 |---|---|---|---|
@@ -57,6 +60,17 @@ Crew organises commands into four groups across three resource types:
 | **install** | `install:skill` | `install:subagent` | `install:team` |
 | **add** | `add:skill` | `add:subagent` | `add:team` |
 | **update** | `update:skill` | `update:subagent` | `update:team` |
+
+### `init` — Install everything at once
+
+Runs `install:skill`, `install:subagent`, and `install:team` in sequence. The first step performs agent detection and saves the selection to `crew.json`; the other two reuse that selection, so you're only prompted for agents once.
+
+```bash
+crew init
+
+# Non-interactive: uses saved/auto-detected agents, skips all prompts
+crew init --no-interaction
+```
 
 ### `new:*` — Scaffold a new resource locally
 

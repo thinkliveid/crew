@@ -27,6 +27,7 @@ use Symfony\Component\Console\Application;
 use Thinkliveid\Crew\Console\AddSkillCommand;
 use Thinkliveid\Crew\Console\AddSubAgentCommand;
 use Thinkliveid\Crew\Console\AddTeamCommand;
+use Thinkliveid\Crew\Console\InitCommand;
 use Thinkliveid\Crew\Console\InstallCommand;
 use Thinkliveid\Crew\Console\InstallSubAgentCommand;
 use Thinkliveid\Crew\Console\InstallTeamCommand;
@@ -45,6 +46,7 @@ $strategyFactory = new DetectionStrategyFactory();
 $agentsDetector = new AgentsDetector($strategyFactory);
 
 $application = new Application("AI Crew (personal skills assistant)", "1.0.0");
+$application->addCommand(new InitCommand());
 $application->addCommand(new InstallCommand($config, $agentsDetector));
 $application->addCommand(new AddSkillCommand($config, $agentsDetector));
 $application->addCommand(new UpdateCommand($config));
