@@ -38,9 +38,9 @@
   ],
   "require": {
     "php": "^8.3",
-    "guzzlehttp/guzzle": "^7.6",
-    "symfony/console": "^7.0|^8.0",
-    "symfony/process": "^6.0",
-    "symfony/yaml": "^7.0|^8.0"
+    "guzzlehttp/guzzle": "^7.9.3",
+    "symfony/console": "^6.0",
+    "symfony/process": "^6.3.4",
+    "symfony/yaml": "^6.0"
   }
 }
