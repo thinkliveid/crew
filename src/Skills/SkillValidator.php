@@ -100,16 +100,20 @@ class SkillValidator
       }
     }
 
-    // 6. Validate 'compatibility' (optional)
+    // 6. Validate 'compatibility' (optional): string or mapping
     if (isset($frontmatter['compatibility']))
     {
-      if (!is_string($frontmatter['compatibility']))
+      $compatibility = $frontmatter['compatibility'];
+      if (is_string($compatibility))
       {
-        $errors[] = 'compatibility must be a string';
+        if (mb_strlen($compatibility) > 500)
+        {
+          $errors[] = 'compatibility must be at most 500 characters';
+        }
       }
-      elseif (mb_strlen($frontmatter['compatibility']) > 500)
+      elseif (!is_array($compatibility))
       {
-        $errors[] = 'compatibility must be at most 500 characters';
+        $errors[] = 'compatibility must be a string or mapping';
       }
     }
 

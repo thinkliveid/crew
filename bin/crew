@@ -34,6 +34,7 @@ use Thinkliveid\Crew\Console\InstallTeamCommand;
 use Thinkliveid\Crew\Console\NewSkillCommand;
 use Thinkliveid\Crew\Console\NewSubAgentCommand;
 use Thinkliveid\Crew\Console\NewTeamCommand;
+use Thinkliveid\Crew\Console\SyncCommand;
 use Thinkliveid\Crew\Console\UpdateCommand;
 use Thinkliveid\Crew\Console\UpdateSubAgentCommand;
 use Thinkliveid\Crew\Console\UpdateTeamCommand;
@@ -47,6 +48,7 @@ $agentsDetector = new AgentsDetector($strategyFactory);
 
 $application = new Application("AI Crew (personal skills assistant)", "1.0.0");
 $application->addCommand(new InitCommand());
+$application->addCommand(new SyncCommand());
 $application->addCommand(new InstallCommand($config, $agentsDetector));
 $application->addCommand(new AddSkillCommand($config, $agentsDetector));
 $application->addCommand(new UpdateCommand($config));
