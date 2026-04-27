@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Thinkliveid\Crew\Install;
 
+use Thinkliveid\Crew\Commands\CommandValidator;
+use Thinkliveid\Crew\Contracts\SupportsCommands;
 use Thinkliveid\Crew\Contracts\SupportsGuidelines;
 use Thinkliveid\Crew\Contracts\SupportsSubAgents;
-use Thinkliveid\Crew\Contracts\SupportsTeams;
 use Thinkliveid\Crew\Install\Agents\Agent;
 use Thinkliveid\Crew\Skills\SkillValidator;
 use Thinkliveid\Crew\SubAgents\SubAgentValidator;
-use Thinkliveid\Crew\Teams\TeamValidator;
 
 class GuidelineWriter
 {
@@ -19,13 +19,13 @@ class GuidelineWriter
 
   protected SkillValidator $validator;
   protected SubAgentValidator $subAgentValidator;
-  protected TeamValidator $teamValidator;
+  protected CommandValidator $commandValidator;
 
   public function __construct(protected string $basePath)
   {
     $this->validator = new SkillValidator();
     $this->subAgentValidator = new SubAgentValidator();
-    $this->teamValidator = new TeamValidator();
+    $this->commandValidator = new CommandValidator();
   }
 
   /**
@@ -64,23 +64,23 @@ class GuidelineWriter
   }
 
   /**
-   * Write all content types (skills, sub-agents, teams) in one atomic <crew-guidelines> block.
+   * Write all content types (skills, sub-agents, commands) in one atomic <crew-guidelines> block.
    *
    * @param Agent&SupportsGuidelines $agent
    * @param array<int, array{name: string, description: string, path: string}> $skills
    * @param array<int, array{name: string, description: string, path: string}> $subAgents
-   * @param array<int, array{name: string, description: string, path: string}> $teams
+   * @param array<int, array{name: string, description: string, path: string}> $commands
    * @return bool
    */
-  public function writeAll(Agent&SupportsGuidelines $agent, array $skills, array $subAgents = [], array $teams = []): bool
+  public function writeAll(Agent&SupportsGuidelines $agent, array $skills, array $subAgents = [], array $commands = []): bool
   {
-    if (empty($skills) && empty($subAgents) && empty($teams))
+    if (empty($skills) && empty($subAgents) && empty($commands))
     {
       return false;
     }
 
     $filePath = $this->basePath . '/' . $agent->guidelinesPath();
-    $block = $this->buildFullBlock($skills, $subAgents, $teams);
+    $block = $this->buildFullBlock($skills, $subAgents, $commands);
     $block = $agent->transformGuidelines($block);
 
     $existingContent = file_exists($filePath) ? file_get_contents($filePath) : '';
@@ -114,9 +114,9 @@ class GuidelineWriter
    *
    * @param array<int, array{name: string, description: string, path: string}> $skills
    * @param array<int, array{name: string, description: string, path: string}> $subAgents
-   * @param array<int, array{name: string, description: string, path: string}> $teams
+   * @param array<int, array{name: string, description: string, path: string}> $commands
    */
-  protected function buildFullBlock(array $skills, array $subAgents, array $teams): string
+  protected function buildFullBlock(array $skills, array $subAgents, array $commands = []): string
   {
     $lines = [];
     $lines[] = self::TAG_OPEN;
@@ -151,16 +151,16 @@ class GuidelineWriter
       $lines[] = '';
     }
 
-    if (!empty($teams))
+    if (!empty($commands))
     {
-      $lines[] = '## Team Templates';
+      $lines[] = '## Commands';
       $lines[] = '';
-      $lines[] = 'This project has the following team templates installed:';
+      $lines[] = 'This project has the following slash commands installed:';
       $lines[] = '';
 
-      foreach ($teams as $team)
+      foreach ($commands as $command)
       {
-        $lines[] = sprintf('- `%s` — %s (path: %s)', $team['name'], $team['description'], $team['path']);
+        $lines[] = sprintf('- `/%s` — %s (path: %s)', $command['name'], $command['description'], $command['path']);
       }
 
       $lines[] = '';
@@ -393,21 +393,20 @@ class GuidelineWriter
   }
 
   /**
-   * Collect team info from .ai/teams/ and agent-specific directory.
+   * Collect slash command info from .ai/commands/ and agent-specific directory.
    *
    * @param Agent&SupportsGuidelines $agent
    * @return array<int, array{name: string, description: string, path: string}>
    */
-  public function collectTeamInfo(Agent&SupportsGuidelines $agent): array
+  public function collectCommandInfo(Agent&SupportsGuidelines $agent): array
   {
-    $agentTeamsPath = $agent instanceof SupportsTeams
-      ? $agent->teamsPath()
-      : '.claude/teams';
+    $agentCommandsPath = $agent instanceof SupportsCommands
+      ? $agent->commandsPath()
+      : '.claude/commands';
 
-    $teams = [];
+    $commands = [];
 
-    // Scan .ai/teams/ source
-    $sourcePath = $this->basePath . '/.ai/teams';
+    $sourcePath = $this->basePath . '/.ai/commands';
     if (is_dir($sourcePath))
     {
       $entries = scandir($sourcePath);
@@ -420,35 +419,35 @@ class GuidelineWriter
             continue;
           }
 
-          $teamDir = $sourcePath . '/' . $entry;
-          if (!is_dir($teamDir))
+          $filePath = $sourcePath . '/' . $entry;
+          if (!is_file($filePath) || !str_ends_with($entry, '.md'))
           {
             continue;
           }
 
-          $result = $this->teamValidator->validate($teamDir);
+          $result = $this->commandValidator->validate($filePath);
           if (!$result->valid)
           {
             continue;
           }
 
-          $teams[] = [
-            'name' => $entry,
+          $name = pathinfo($entry, PATHINFO_FILENAME);
+          $commands[] = [
+            'name' => $name,
             'description' => $result->description() ?? 'No description available',
-            'path' => $agentTeamsPath . '/' . $entry,
+            'path' => $agentCommandsPath . '/' . $entry,
           ];
         }
       }
     }
 
-    // Scan agent-specific directory for additional teams
-    $agentFullPath = $this->basePath . '/' . $agentTeamsPath;
+    $agentFullPath = $this->basePath . '/' . $agentCommandsPath;
     if (is_dir($agentFullPath))
     {
       $agentEntries = scandir($agentFullPath);
       if ($agentEntries !== false)
       {
-        $existingNames = array_column($teams, 'name');
+        $existingNames = array_column($commands, 'name');
         foreach ($agentEntries as $entry)
         {
           if ($entry === '.' || $entry === '..')
@@ -456,35 +455,36 @@ class GuidelineWriter
             continue;
           }
 
-          if (in_array($entry, $existingNames, true))
+          $filePath = $agentFullPath . '/' . $entry;
+          if (!is_file($filePath) || !str_ends_with($entry, '.md'))
           {
             continue;
           }
 
-          $teamDir = $agentFullPath . '/' . $entry;
-          if (!is_dir($teamDir))
+          $name = pathinfo($entry, PATHINFO_FILENAME);
+          if (in_array($name, $existingNames, true))
           {
             continue;
           }
 
-          $result = $this->teamValidator->validate($teamDir);
+          $result = $this->commandValidator->validate($filePath);
           if (!$result->valid)
           {
             continue;
           }
 
-          $teams[] = [
-            'name' => $entry,
+          $commands[] = [
+            'name' => $name,
             'description' => $result->description() ?? 'No description available',
-            'path' => $agentTeamsPath . '/' . $entry,
+            'path' => $agentCommandsPath . '/' . $entry,
           ];
         }
       }
     }
 
-    usort($teams, static fn(array $a, array $b): int => strcmp($a['name'], $b['name']));
+    usort($commands, static fn(array $a, array $b): int => strcmp($a['name'], $b['name']));
 
-    return $teams;
+    return $commands;
   }
 
 }

@@ -13,10 +13,10 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Thinkliveid\Crew\Concerns\DisplayHelper;
 
 #[AsCommand(
-  name: 'new:team',
-  description: 'Create a new team scaffold in .ai/teams/'
+  name: 'new:command',
+  description: 'Create a new slash command scaffold in .ai/commands/'
 )]
-class NewTeamCommand extends Command
+class NewCommandCommand extends Command
 {
   use DisplayHelper;
 
@@ -26,7 +26,7 @@ class NewTeamCommand extends Command
 
   protected function configure(): void
   {
-    $this->addArgument('name', InputArgument::OPTIONAL, 'Team name (lowercase alphanumeric + hyphens)');
+    $this->addArgument('name', InputArgument::OPTIONAL, 'Command name (lowercase alphanumeric + hyphens)');
   }
 
   protected function execute(InputInterface $input, OutputInterface $output): int
@@ -34,7 +34,7 @@ class NewTeamCommand extends Command
     $this->output = $output;
     $io = new SymfonyStyle($input, $output);
 
-    $this->displayBoostHeader('New Team', basename(getcwd()));
+    $this->displayBoostHeader('New Command', basename(getcwd()));
 
     $name = $this->resolveName($input, $io);
     if ($name === null)
@@ -42,10 +42,10 @@ class NewTeamCommand extends Command
       return Command::FAILURE;
     }
 
-    $targetDir = getcwd() . '/.ai/teams/' . $name;
-    if (is_dir($targetDir))
+    $targetFile = getcwd() . '/.ai/commands/' . $name . '.md';
+    if (file_exists($targetFile))
     {
-      $io->error("Team '{$name}' already exists at .ai/teams/{$name}/");
+      $io->error("Command '{$name}' already exists at .ai/commands/{$name}.md");
 
       return Command::FAILURE;
     }
@@ -68,7 +68,6 @@ class NewTeamCommand extends Command
     $displayName = $this->toDisplayName($name);
     $content = <<<MD
 ---
-name: {$name}
 description: {$description}
 ---
 
@@ -76,20 +75,18 @@ description: {$description}
 
 {$description}
 
-## Members
-
-<!-- Define team members and their roles here -->
+<!-- Write your slash command prompt here. Use \$ARGUMENTS to reference user input. -->
 MD;
 
-    if (!is_dir(dirname($targetDir)))
+    $targetDir = dirname($targetFile);
+    if (!is_dir($targetDir))
     {
-      mkdir(dirname($targetDir), 0755, true);
+      mkdir($targetDir, 0755, true);
     }
 
-    mkdir($targetDir, 0755, true);
-    file_put_contents($targetDir . '/TEAM.md', $content . "\n");
+    file_put_contents($targetFile, $content . "\n");
 
-    $io->success("Created team '{$name}' at .ai/teams/{$name}/TEAM.md");
+    $io->success("Created command '{$name}' at .ai/commands/{$name}.md");
 
     return Command::SUCCESS;
   }
@@ -110,7 +107,7 @@ MD;
       return $name;
     }
 
-    return $io->ask('Team name', null, function (?string $value): string {
+    return $io->ask('Command name', null, function (?string $value): string {
       $value = trim($value ?? '');
       if (!$this->isValidName($value))
       {

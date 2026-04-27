@@ -59,20 +59,20 @@ class Config
   }
 
   /** @return array<int, string> */
-  public function getTeams(): array
+  public function getCommands(): array
   {
-    return $this->get('teams', []);
+    return $this->get('commands', []);
   }
 
-  /** @param array<int, string> $teams */
-  public function setTeams(array $teams): void
+  /** @param array<int, string> $commands */
+  public function setCommands(array $commands): void
   {
-    $this->set('teams', $teams);
+    $this->set('commands', $commands);
   }
 
-  public function hasTeams(): bool
+  public function hasCommands(): bool
   {
-    return $this->getTeams() !== [];
+    return $this->getCommands() !== [];
   }
 
   public function getMcp(): bool

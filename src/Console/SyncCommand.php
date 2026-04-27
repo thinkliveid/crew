@@ -13,7 +13,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
   name: 'sync',
-  description: 'Update skills, sub-agents, and team templates in one pass'
+  description: 'Update skills, sub-agents, and slash commands in one pass'
 )]
 class SyncCommand extends Command
 {
@@ -22,7 +22,7 @@ class SyncCommand extends Command
     $io = new SymfonyStyle($input, $output);
     $interactive = $input->isInteractive();
 
-    $steps = ['update:skill', 'update:subagent', 'update:team'];
+    $steps = ['update:skill', 'update:subagent', 'update:command'];
 
     foreach ($steps as $name)
     {

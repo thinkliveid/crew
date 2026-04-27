@@ -11,21 +11,21 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Thinkliveid\Crew\Commands\BuiltIn\BuiltInCommandProvider;
+use Thinkliveid\Crew\Commands\Local\LocalCommandProvider;
 use Thinkliveid\Crew\Concerns\DisplayHelper;
+use Thinkliveid\Crew\Contracts\SupportsCommands;
 use Thinkliveid\Crew\Contracts\SupportsGuidelines;
-use Thinkliveid\Crew\Contracts\SupportsTeams;
 use Thinkliveid\Crew\Install\AgentsDetector;
 use Thinkliveid\Crew\Install\Agents\Agent;
 use Thinkliveid\Crew\Install\GuidelineWriter;
-use Thinkliveid\Crew\Teams\BuiltIn\BuiltInTeamProvider;
-use Thinkliveid\Crew\Teams\Local\LocalTeamProvider;
 use Thinkliveid\Crew\Support\Config;
 
 #[AsCommand(
-  name: 'install:team',
-  description: 'Detect agents, sync local team templates, and store configuration'
+  name: 'install:command',
+  description: 'Detect agents, sync local slash commands, and store configuration'
 )]
-class InstallTeamCommand extends Command
+class InstallCommandCommand extends Command
 {
   use DisplayHelper;
 
@@ -54,7 +54,7 @@ class InstallTeamCommand extends Command
 
     if ($interactive)
     {
-      $this->displayBoostHeader('Teams', basename(getcwd()));
+      $this->displayBoostHeader('Commands', basename(getcwd()));
     }
 
     if ($skipDetection)
@@ -63,13 +63,9 @@ class InstallTeamCommand extends Command
     }
     else
     {
-      // --- Discover agents ---
       $this->discoverEnvironment();
-
-      // --- Select agents ---
       $selectedAgentNames = $this->selectAgents($input, $io, $interactive);
 
-      // --- Store agents in config ---
       if (!empty($selectedAgentNames))
       {
         $this->config->setAgents($selectedAgentNames);
@@ -81,17 +77,10 @@ class InstallTeamCommand extends Command
       }
     }
 
-    // --- Publish built-in teams to .ai/teams/ ---
     $selectedAgents = $this->resolveAgentInstances($selectedAgentNames);
-    $this->publishBuiltInTeams($interactive, $io);
-
-    // --- Local team sync per agent ---
-    $this->syncLocalTeamsForAgents($selectedAgents, $interactive, $io);
-
-    // --- GitHub team install from crew.json ---
-    $this->installConfiguredTeams($interactive, $io, $output);
-
-    // --- Write guidelines ---
+    $this->publishBuiltInCommands($interactive, $io);
+    $this->syncLocalCommandsForAgents($selectedAgents, $interactive, $io);
+    $this->installConfiguredCommands($interactive, $io, $output);
     $this->writeGuidelines($selectedAgents, $interactive, $io);
 
     return Command::SUCCESS;
@@ -189,19 +178,19 @@ class InstallTeamCommand extends Command
   /**
    * @param array<Agent> $agents
    */
-  private function syncLocalTeamsForAgents(array $agents, bool $interactive, SymfonyStyle $io): void
+  private function syncLocalCommandsForAgents(array $agents, bool $interactive, SymfonyStyle $io): void
   {
     $basePath = getcwd();
 
-    $sourceProvider = new LocalTeamProvider($basePath);
-    $localTeams = $sourceProvider->discoverTeams();
+    $sourceProvider = new LocalCommandProvider($basePath);
+    $localCommands = $sourceProvider->discoverCommands();
 
-    $invalidTeams = $sourceProvider->getInvalidTeams();
+    $invalidCommands = $sourceProvider->getInvalidCommands();
 
-    if (!empty($invalidTeams) && $interactive)
+    if (!empty($invalidCommands) && $interactive)
     {
-      $io->warning('Some local teams failed validation and will be skipped:');
-      foreach ($invalidTeams as $name => $result)
+      $io->warning('Some local commands failed validation and will be skipped:');
+      foreach ($invalidCommands as $name => $result)
       {
         $io->text(sprintf('  <comment>%s</comment>:', $name));
         foreach ($result->errors as $error)
@@ -213,76 +202,76 @@ class InstallTeamCommand extends Command
       $io->newLine();
     }
 
-    if (empty($localTeams))
+    if (empty($localCommands))
     {
       if ($interactive)
       {
-        $io->info('No valid local teams found in .ai/teams/.');
+        $io->info('No valid local commands found in .ai/commands/.');
       }
       return;
     }
 
-    $teamAgents = array_filter($agents, fn(Agent $agent): bool => $agent instanceof SupportsTeams);
-    if (empty($teamAgents))
+    $commandAgents = array_filter($agents, fn(Agent $agent): bool => $agent instanceof SupportsCommands);
+    if (empty($commandAgents))
     {
       if ($interactive)
       {
-        $io->warning('No selected agents support teams.');
+        $io->warning('No selected agents support slash commands.');
       }
       return;
     }
 
     if ($interactive)
     {
-      $io->section('Local Teams');
-      $io->listing($localTeams);
+      $io->section('Local Commands');
+      $io->listing($localCommands);
 
-      $agentNames = array_map(fn(Agent $a): string => $a->displayName(), $teamAgents);
+      $agentNames = array_map(fn(Agent $a): string => $a->displayName(), $commandAgents);
       $proceed = $io->confirm(
-        sprintf('Sync these local teams to %s?', implode(', ', $agentNames)),
+        sprintf('Sync these local commands to %s?', implode(', ', $agentNames)),
         true
       );
 
       if (!$proceed)
       {
-        $io->comment('Skipped local team sync.');
+        $io->comment('Skipped local command sync.');
         return;
       }
     }
 
-    foreach ($teamAgents as $agent)
+    foreach ($commandAgents as $agent)
     {
-      /** @var Agent&SupportsTeams $agent */
-      $targetPath = $basePath . '/' . $agent->teamsPath();
-      $provider = new LocalTeamProvider($basePath, $targetPath);
+      /** @var Agent&SupportsCommands $agent */
+      $targetPath = $basePath . '/' . $agent->commandsPath();
+      $provider = new LocalCommandProvider($basePath, $targetPath);
       $synced = $provider->syncAll();
       if (!empty($synced) && $interactive)
       {
         $io->text(sprintf(
-          '  <info>%s</info>: synced %d team(s) to %s',
+          '  <info>%s</info>: synced %d command(s) to %s',
           $agent->displayName(),
           count($synced),
-          $agent->teamsPath()
+          $agent->commandsPath()
         ));
       }
     }
 
     if ($interactive)
     {
-      $io->success('Local teams synced to all selected agents.');
+      $io->success('Local commands synced to all selected agents.');
     }
   }
 
-  private function publishBuiltInTeams(bool $interactive, SymfonyStyle $io): void
+  private function publishBuiltInCommands(bool $interactive, SymfonyStyle $io): void
   {
-    $provider = new BuiltInTeamProvider(getcwd());
+    $provider = new BuiltInCommandProvider(getcwd());
     $published = $provider->publishAll();
 
-    $invalidTeams = $provider->getInvalidTeams();
-    if (!empty($invalidTeams) && $interactive)
+    $invalidCommands = $provider->getInvalidCommands();
+    if (!empty($invalidCommands) && $interactive)
     {
-      $io->warning('Some built-in teams failed validation and will be skipped:');
-      foreach ($invalidTeams as $name => $result)
+      $io->warning('Some built-in commands failed validation and will be skipped:');
+      foreach ($invalidCommands as $name => $result)
       {
         $io->text(sprintf('  <comment>%s</comment>:', $name));
         foreach ($result->errors as $error)
@@ -296,8 +285,8 @@ class InstallTeamCommand extends Command
 
     if (!empty($published) && $interactive)
     {
-      $io->section('Built-in Teams');
-      $io->text(sprintf('Published %d built-in team(s) to .ai/teams/:', count($published)));
+      $io->section('Built-in Commands');
+      $io->text(sprintf('Published %d built-in command(s) to .ai/commands/:', count($published)));
       $io->listing($published);
     }
   }
@@ -325,14 +314,14 @@ class InstallTeamCommand extends Command
       /** @var Agent&SupportsGuidelines $agent */
       $skills = $writer->collectSkillInfo($agent);
       $subAgents = $writer->collectSubAgentInfo($agent);
-      $teams = $writer->collectTeamInfo($agent);
+      $commands = $writer->collectCommandInfo($agent);
 
-      if (empty($skills) && empty($subAgents) && empty($teams))
+      if (empty($skills) && empty($subAgents) && empty($commands))
       {
         continue;
       }
 
-      if ($writer->writeAll($agent, $skills, $subAgents, $teams))
+      if ($writer->writeAll($agent, $skills, $subAgents, $commands))
       {
         $written[] = $agent->guidelinesPath();
       }
@@ -346,9 +335,9 @@ class InstallTeamCommand extends Command
     }
   }
 
-  private function installConfiguredTeams(bool $interactive, SymfonyStyle $io, OutputInterface $output): void
+  private function installConfiguredCommands(bool $interactive, SymfonyStyle $io, OutputInterface $output): void
   {
-    $repos = $this->config->getTeams();
+    $repos = $this->config->getCommands();
     if (empty($repos))
     {
       return;
@@ -356,18 +345,18 @@ class InstallTeamCommand extends Command
 
     if ($interactive)
     {
-      $io->section('GitHub Teams');
+      $io->section('GitHub Commands');
       $io->listing($repos);
 
-      $proceed = $io->confirm('Install teams from these repositories?', true);
+      $proceed = $io->confirm('Install commands from these repositories?', true);
       if (!$proceed)
       {
-        $io->comment('Skipped GitHub team installation.');
+        $io->comment('Skipped GitHub command installation.');
         return;
       }
     }
 
-    $addCommand = $this->getApplication()->find('add:team');
+    $addCommand = $this->getApplication()->find('add:command');
     foreach ($repos as $repo)
     {
       $addInput = new ArrayInput([

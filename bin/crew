@@ -24,20 +24,20 @@ if (
 }
 
 use Symfony\Component\Console\Application;
+use Thinkliveid\Crew\Console\AddCommandCommand;
 use Thinkliveid\Crew\Console\AddSkillCommand;
 use Thinkliveid\Crew\Console\AddSubAgentCommand;
-use Thinkliveid\Crew\Console\AddTeamCommand;
 use Thinkliveid\Crew\Console\InitCommand;
 use Thinkliveid\Crew\Console\InstallCommand;
+use Thinkliveid\Crew\Console\InstallCommandCommand;
 use Thinkliveid\Crew\Console\InstallSubAgentCommand;
-use Thinkliveid\Crew\Console\InstallTeamCommand;
+use Thinkliveid\Crew\Console\NewCommandCommand;
 use Thinkliveid\Crew\Console\NewSkillCommand;
 use Thinkliveid\Crew\Console\NewSubAgentCommand;
-use Thinkliveid\Crew\Console\NewTeamCommand;
 use Thinkliveid\Crew\Console\SyncCommand;
 use Thinkliveid\Crew\Console\UpdateCommand;
+use Thinkliveid\Crew\Console\UpdateCommandCommand;
 use Thinkliveid\Crew\Console\UpdateSubAgentCommand;
-use Thinkliveid\Crew\Console\UpdateTeamCommand;
 use Thinkliveid\Crew\Install\AgentsDetector;
 use Thinkliveid\Crew\Install\Detection\DetectionStrategyFactory;
 use Thinkliveid\Crew\Support\Config;
@@ -55,11 +55,11 @@ $application->add(new UpdateCommand($config));
 $application->add(new InstallSubAgentCommand($config, $agentsDetector));
 $application->add(new AddSubAgentCommand($config, $agentsDetector));
 $application->add(new UpdateSubAgentCommand($config));
-$application->add(new InstallTeamCommand($config, $agentsDetector));
-$application->add(new AddTeamCommand($config, $agentsDetector));
-$application->add(new UpdateTeamCommand($config));
+$application->add(new InstallCommandCommand($config, $agentsDetector));
+$application->add(new AddCommandCommand($config, $agentsDetector));
+$application->add(new UpdateCommandCommand($config));
 $application->add(new NewSkillCommand());
 $application->add(new NewSubAgentCommand());
-$application->add(new NewTeamCommand());
+$application->add(new NewCommandCommand());
 
 $application->run();

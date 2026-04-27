@@ -325,14 +325,14 @@ class InstallSubAgentCommand extends Command
       /** @var Agent&SupportsGuidelines $agent */
       $skills = $writer->collectSkillInfo($agent);
       $subAgents = $writer->collectSubAgentInfo($agent);
-      $teams = $writer->collectTeamInfo($agent);
+      $commands = $writer->collectCommandInfo($agent);
 
-      if (empty($skills) && empty($subAgents) && empty($teams))
+      if (empty($skills) && empty($subAgents) && empty($commands))
       {
         continue;
       }
 
-      if ($writer->writeAll($agent, $skills, $subAgents, $teams))
+      if ($writer->writeAll($agent, $skills, $subAgents, $commands))
       {
         $written[] = $agent->guidelinesPath();
       }

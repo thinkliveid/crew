@@ -11,21 +11,21 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Thinkliveid\Crew\Commands\Remote\GitHubCommandProvider;
 use Thinkliveid\Crew\Concerns\DisplayHelper;
+use Thinkliveid\Crew\Contracts\SupportsCommands;
 use Thinkliveid\Crew\Contracts\SupportsGuidelines;
-use Thinkliveid\Crew\Contracts\SupportsTeams;
 use Thinkliveid\Crew\Install\AgentsDetector;
 use Thinkliveid\Crew\Install\Agents\Agent;
 use Thinkliveid\Crew\Install\GuidelineWriter;
 use Thinkliveid\Crew\Skills\Remote\GitHubRepository;
-use Thinkliveid\Crew\Teams\Remote\GitHubTeamProvider;
 use Thinkliveid\Crew\Support\Config;
 
 #[AsCommand(
-  name: 'add:team',
-  description: 'Add team templates from a GitHub repository'
+  name: 'add:command',
+  description: 'Add slash commands from a GitHub repository'
 )]
-class AddTeamCommand extends Command
+class AddCommandCommand extends Command
 {
   use DisplayHelper;
 
@@ -47,7 +47,7 @@ class AddTeamCommand extends Command
 
     if ($interactive)
     {
-      $this->displayBoostHeader('Add Team', basename(getcwd()));
+      $this->displayBoostHeader('Add Command', basename(getcwd()));
     }
 
     $repos = $this->resolveRepositories($input, $io);
@@ -61,9 +61,8 @@ class AddTeamCommand extends Command
       return Command::SUCCESS;
     }
 
-    $this->installGitHubTeams($repos, $interactive, $io, $input, $output);
+    $this->installGitHubCommands($repos, $interactive, $io, $input, $output);
 
-    // --- Write guidelines ---
     $this->writeGuidelines($interactive, $io);
 
     return Command::SUCCESS;
@@ -82,7 +81,7 @@ class AddTeamCommand extends Command
 
     if ($input->isInteractive())
     {
-      $repo = $io->ask('Enter a GitHub repository (owner/repo) to install teams from (leave empty to skip)', '');
+      $repo = $io->ask('Enter a GitHub repository (owner/repo) to install commands from (leave empty to skip)', '');
 
       if ($repo !== '' && $repo !== null)
       {
@@ -92,15 +91,15 @@ class AddTeamCommand extends Command
       return [];
     }
 
-    return $this->config->getTeams();
+    return $this->config->getCommands();
   }
 
   /**
    * @param array<int, string> $repos
    */
-  protected function installGitHubTeams(array $repos, bool $interactive, SymfonyStyle $io, InputInterface $input, OutputInterface $output): void
+  protected function installGitHubCommands(array $repos, bool $interactive, SymfonyStyle $io, InputInterface $input, OutputInterface $output): void
   {
-    $io->section('GitHub Teams');
+    $io->section('GitHub Commands');
     $allRepos = [];
 
     foreach ($repos as $repoInput)
@@ -116,12 +115,12 @@ class AddTeamCommand extends Command
       }
 
       $allRepos[] = $repository->fullName();
-      $io->text("Discovering teams in <info>{$repository->fullName()}</info>...");
-      $provider = new GitHubTeamProvider($repository, $this->config);
+      $io->text("Discovering commands in <info>{$repository->fullName()}</info>...");
+      $provider = new GitHubCommandProvider($repository, $this->config);
 
       try
       {
-        $teams = $provider->discoverTeams();
+        $commands = $provider->discoverCommands();
       }
       catch (\RuntimeException $e)
       {
@@ -129,22 +128,22 @@ class AddTeamCommand extends Command
         continue;
       }
 
-      if (empty($teams))
+      if (empty($commands))
       {
-        $io->warning("No teams found in {$repository->fullName()}.");
+        $io->warning("No commands found in {$repository->fullName()}.");
         continue;
       }
 
       if ($interactive)
       {
         $choices = [];
-        foreach ($teams as $team)
+        foreach ($commands as $command)
         {
-          $choices[$team->name] = $team->name;
+          $choices[$command->name] = $command->name;
         }
 
         $question = new ChoiceQuestion(
-          "Select teams to install from {$repository->fullName()} (comma-separated numbers)",
+          "Select commands to install from {$repository->fullName()} (comma-separated numbers)",
           array_values($choices),
           implode(',', array_keys(array_values($choices))),
         );
@@ -152,65 +151,61 @@ class AddTeamCommand extends Command
         $question->setMultiselect(true);
         $helper = $this->getHelper('question');
         $selected = $helper->ask($input, $output, $question);
-        $teamsToInstall = array_filter($teams, fn($team) => in_array($team->name, $selected, true));
+        $commandsToInstall = array_filter($commands, fn($command) => in_array($command->name, $selected, true));
       }
       else
       {
-        $teamsToInstall = $teams;
+        $commandsToInstall = $commands;
       }
 
-      $targetPaths = $this->getTeamPaths();
-      foreach ($teamsToInstall as $team)
+      $targetPaths = $this->getCommandPaths();
+      foreach ($commandsToInstall as $command)
       {
         foreach ($targetPaths as $agentDisplayName => $basePath)
         {
-          $targetPath = $basePath . '/' . $team->name;
-          $io->text("  Installing <info>{$team->name}</info> → {$agentDisplayName}...");
+          $io->text("  Installing <info>{$command->name}</info> → {$agentDisplayName}...");
 
-          $success = $provider->downloadTeam($team, $targetPath);
+          $success = $provider->downloadCommand($command, $basePath);
           if ($success)
           {
-            $io->text("  <info>✓</info> {$team->name} → {$agentDisplayName}");
+            $io->text("  <info>✓</info> {$command->name} → {$agentDisplayName}");
           }
           else
           {
-            $io->text("  <error>✗</error> Failed to download {$team->name} for {$agentDisplayName}");
+            $io->text("  <error>✗</error> Failed to download {$command->name} for {$agentDisplayName}");
           }
         }
       }
     }
 
-    // Persist repos to crew.json
-    $existingRepos = $this->config->getTeams();
+    $existingRepos = $this->config->getCommands();
     $mergedRepos = array_values(array_unique(array_merge($existingRepos, $allRepos)));
-    $this->config->setTeams($mergedRepos);
+    $this->config->setCommands($mergedRepos);
   }
 
   /**
-   * Get team target paths for configured agents.
-   *
-   * @return array<string, string> displayName => absolute path
+   * @return array<string, string>
    */
-  protected function getTeamPaths(): array
+  protected function getCommandPaths(): array
   {
     $agentNames = $this->config->getAgents();
     $basePath = getcwd();
 
     if (empty($agentNames))
     {
-      return ['default' => $basePath . '/.claude/teams'];
+      return ['default' => $basePath . '/.claude/commands'];
     }
 
     $paths = [];
     foreach ($this->agentsDetector->getAgents() as $agent)
     {
-      if (in_array($agent->name(), $agentNames, true) && $agent instanceof SupportsTeams)
+      if (in_array($agent->name(), $agentNames, true) && $agent instanceof SupportsCommands)
       {
-        $paths[$agent->displayName()] = $basePath . '/' . $agent->teamsPath();
+        $paths[$agent->displayName()] = $basePath . '/' . $agent->commandsPath();
       }
     }
 
-    return !empty($paths) ? $paths : ['default' => $basePath . '/.claude/teams'];
+    return !empty($paths) ? $paths : ['default' => $basePath . '/.claude/commands'];
   }
 
   protected function writeGuidelines(bool $interactive, SymfonyStyle $io): void
@@ -240,14 +235,14 @@ class AddTeamCommand extends Command
       /** @var Agent&SupportsGuidelines $agent */
       $skills = $writer->collectSkillInfo($agent);
       $subAgents = $writer->collectSubAgentInfo($agent);
-      $teams = $writer->collectTeamInfo($agent);
+      $commands = $writer->collectCommandInfo($agent);
 
-      if (empty($skills) && empty($subAgents) && empty($teams))
+      if (empty($skills) && empty($subAgents) && empty($commands))
       {
         continue;
       }
 
-      if ($writer->writeAll($agent, $skills, $subAgents, $teams))
+      if ($writer->writeAll($agent, $skills, $subAgents, $commands))
       {
         $written[] = $agent->guidelinesPath();
       }

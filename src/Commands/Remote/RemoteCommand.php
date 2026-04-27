@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Thinkliveid\Crew\Teams\Remote;
+namespace Thinkliveid\Crew\Commands\Remote;
 
-class RemoteTeam
+class RemoteCommand
 {
   public function __construct(public string $name, public string $repo, public string $path)
   {
